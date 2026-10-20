@@ -18,11 +18,14 @@ jobs:
         export THEOS=$HOME/theos
         git clone --recursive https://github.com/theos/theos.git $THEOS
         echo "THEOS=$THEOS" >> $GITHUB_ENV
-        # Tải và cài đặt ldid cho Mac
+        
+        # Cài đặt ldid và trỏ thẳng đường dẫn
         brew install ldid
+        echo "THEOS_LDID=$(which ldid)" >> $GITHUB_ENV
 
     - name: Build Tweak
       run: |
+        export THEOS=$HOME/theos
         make package
 
     - name: Upload Dylib Artifact
