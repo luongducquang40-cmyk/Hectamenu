@@ -13,11 +13,13 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Install Theos
+    - name: Install Theos and ldid
       run: |
         export THEOS=$HOME/theos
         git clone --recursive https://github.com/theos/theos.git $THEOS
         echo "THEOS=$THEOS" >> $GITHUB_ENV
+        # Tải và cài đặt ldid cho Mac
+        brew install ldid
 
     - name: Build Tweak
       run: |
