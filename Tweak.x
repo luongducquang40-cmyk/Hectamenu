@@ -1,18 +1,16 @@
 #import <UIKit/UIKit.h>
 
-// --- HÀM HIỂN THỊ ẢNH CHÀO VÀ BẢNG NHẬP KEY ---
+// Biến toàn cục để giữ cửa sổ không bị hủy
+static UIWindow *splashWindow = nil;
+
 __attribute__((constructor))
 static void showGrockSplash() {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *mainWindow = [[UIApplication sharedApplication] windows].firstObject;
-        if (!mainWindow) return;
-        
         // 1. Tạo cửa sổ đè lên trên cùng
-        UIWindow *splashWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        splashWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         splashWindow.windowLevel = UIWindowLevelAlert + 1; 
         splashWindow.backgroundColor = [UIColor blackColor];
         
-        // Tạo một ViewController gốc cho cửa sổ này
         UIViewController *rootVC = [[UIViewController alloc] init];
         rootVC.view.backgroundColor = [UIColor blackColor];
         splashWindow.rootViewController = rootVC;
@@ -30,7 +28,7 @@ static void showGrockSplash() {
         }
         [rootVC.view addSubview:imageView];
         
-        // 3. Sau 3 giây, hiện bảng nhập Key (Gắn trực tiếp vào splashWindow)
+        // 3. Sau 3 giây, TỰ ĐỘNG hiện bảng nhập Key
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"GROCK PANEL" message:@"Vui lòng nhập Key để sử dụng:" preferredStyle:UIAlertControllerStyleAlert];
@@ -56,10 +54,11 @@ static void showGrockSplash() {
                         
                         if (json && !jsonError) {
                             if ([json[@"status"] boolValue]) {
-                                // KEY ĐÚNG -> Ẩn cửa sổ chứa ảnh và bảng Key đi
+                                // Key ĐÚNG -> Ẩn cửa sổ ảnh chào, cho phép vào game
                                 splashWindow.hidden = YES;
+                                splashWindow = nil; // Giải phóng bộ nhớ
                             } else {
-                                // KEY SAI -> Văng game
+                                // Key SAI -> Văng game
                                 exit(0); 
                             }
                         } else {
@@ -70,7 +69,7 @@ static void showGrockSplash() {
                 [task resume];
             }]];
             
-            // Hiển thị bảng nhập Key trên cửa sổ splashWindow
+            // Hiển thị bảng nhập Key trên chính cửa sổ (rootVC) của chúng ta
             [rootVC presentViewController:alert animated:YES completion:nil];
         });
     });
