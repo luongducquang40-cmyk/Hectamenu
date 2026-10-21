@@ -13,6 +13,7 @@ static UIView *globalPanelView = nil;
 static UIView *infoPanelView = nil;
 static UIView *antibandPanelView = nil;
 static UITextView *consoleTextView = nil;
+static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết nối Web
 
 // --- GIAO DIỆN MENU ---
 @interface MenuViewController : UIViewController
@@ -43,7 +44,7 @@ static UITextView *consoleTextView = nil;
     [self.view addSubview:globalLogoBtn];
     
     // 2. BẢNG MENU CHÍNH
-    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 350)];
+    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 380)]; // Tăng chiều cao để chứa label
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     blurView.frame = globalPanelView.bounds;
@@ -61,7 +62,6 @@ static UITextView *consoleTextView = nil;
     [globalPanelView addGestureRecognizer:panelPan];
     [self.view addSubview:globalPanelView];
     
-    // Tiêu đề
     UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 600, 40)];
     title.text = @"GROCK PANEL STORE";
     title.backgroundColor = [UIColor colorWithRed:0.1 green:0.5 blue:0.8 alpha:1.0];
@@ -70,7 +70,6 @@ static UITextView *consoleTextView = nil;
     title.textAlignment = NSTextAlignmentCenter;
     [globalPanelView addSubview:title];
     
-    // Nút X
     UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     closeBtn.frame = CGRectMake(560, 5, 30, 30);
     [closeBtn setTitle:@"X" forState:UIControlStateNormal];
@@ -79,8 +78,14 @@ static UITextView *consoleTextView = nil;
     [closeBtn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     [globalPanelView addSubview:closeBtn];
     
-    // Các hàng chức năng
-    int startY = 50;
+    // Label trạng thái kết nối Server
+    statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 45, 560, 20)];
+    statusLabel.text = @"Trạng thái Web: Đang kết nối...";
+    statusLabel.textColor = [UIColor yellowColor];
+    statusLabel.font = [UIFont systemFontOfSize:12];
+    [globalPanelView addSubview:statusLabel];
+    
+    int startY = 70;
     int spacing = 40;
     [self createRowWithTitle:@"Aimbot" tag:1 yPos:startY];
     [self createRowWithTitle:@"ESP" tag:2 yPos:startY + spacing];
@@ -88,9 +93,8 @@ static UITextView *consoleTextView = nil;
     [self createRowWithTitle:@"God Mode" tag:4 yPos:startY + spacing * 3];
     [self createRowWithTitle:@"FOV Slider" tag:5 yPos:startY + spacing * 4];
     
-    // Nút "ANTIBAN" và "THÔNG TIN" ở dưới
     UIButton *antibanBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    antibanBtn.frame = CGRectMake(20, 300, 270, 35);
+    antibanBtn.frame = CGRectMake(20, 320, 270, 35);
     [antibanBtn setTitle:@"ANTIBAN" forState:UIControlStateNormal];
     antibanBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
     [antibanBtn setTitleColor:[UIColor cyanColor] forState:UIControlStateNormal];
@@ -98,16 +102,15 @@ static UITextView *consoleTextView = nil;
     [globalPanelView addSubview:antibanBtn];
     
     UIButton *infoBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    infoBtn.frame = CGRectMake(310, 300, 270, 35);
+    infoBtn.frame = CGRectMake(310, 320, 270, 35);
     [infoBtn setTitle:@"THÔNG TIN" forState:UIControlStateNormal];
     infoBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
     [infoBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     [infoBtn addTarget:self action:@selector(showInfoPanel) forControlEvents:UIControlEventTouchUpInside];
     [globalPanelView addSubview:infoBtn];
     
-    
-    // --- 3. BẢNG THÔNG TIN CÁ NHÂN ---
-    infoPanelView = [[UIView alloc] initWithFrame:CGRectMake(150, 150, 400, 250)];
+    // --- BẢNG THÔNG TIN ---
+    infoPanelView = [[UIView alloc] initWithFrame:CGRectMake(150, 150, 400, 300)];
     UIVisualEffectView *infoBlur = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     infoBlur.frame = infoPanelView.bounds;
     infoBlur.layer.cornerRadius = 15;
@@ -126,24 +129,41 @@ static UITextView *consoleTextView = nil;
     infoTitle.textAlignment = NSTextAlignmentCenter;
     [infoPanelView addSubview:infoTitle];
     
-    UITextView *textView = [[UITextView alloc] initWithFrame:CGRectMake(20, 50, 360, 150)];
-    textView.backgroundColor = [UIColor clearColor];
-    textView.textColor = [UIColor whiteColor];
-    textView.font = [UIFont systemFontOfSize:16];
-    textView.editable = NO;
-    textView.selectable = YES;
-    textView.text = @"👤 Tên: Lương Đức Quang\n\n🌐 Facebook:\nhttps://www.facebook.com/share/1HwAsXZxFr/?mibextid=wwXIfr\n\n🎵 TikTok:\nwww.tiktok.com/@_luongducquang";
-    [infoPanelView addSubview:textView];
+    UILabel *nameLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 50, 360, 30)];
+    nameLabel.text = @"👤 Tên: Lương Đức Quang";
+    nameLabel.textColor = [UIColor whiteColor];
+    nameLabel.font = [UIFont boldSystemFontOfSize:16];
+    nameLabel.textAlignment = NSTextAlignmentCenter;
+    [infoPanelView addSubview:nameLabel];
+    
+    UIButton *fbBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    fbBtn.frame = CGRectMake(50, 100, 300, 45);
+    [fbBtn setTitle:@"🌐 TRUY CẬP FACEBOOK" forState:UIControlStateNormal];
+    [fbBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    fbBtn.backgroundColor = [UIColor colorWithRed:0.1 green:0.4 blue:0.8 alpha:1.0];
+    fbBtn.layer.cornerRadius = 10;
+    [fbBtn addTarget:self action:@selector(openFacebook) forControlEvents:UIControlEventTouchUpInside];
+    [infoPanelView addSubview:fbBtn];
+    
+    UIButton *ttBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    ttBtn.frame = CGRectMake(50, 160, 300, 45);
+    [ttBtn setTitle:@"🎵 TRUY CẬP TIKTOK" forState:UIControlStateNormal];
+    [ttBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    ttBtn.backgroundColor = [UIColor blackColor];
+    ttBtn.layer.cornerRadius = 10;
+    ttBtn.layer.borderColor = [UIColor whiteColor].CGColor;
+    ttBtn.layer.borderWidth = 1.0;
+    [ttBtn addTarget:self action:@selector(openTikTok) forControlEvents:UIControlEventTouchUpInside];
+    [infoPanelView addSubview:ttBtn];
     
     UIButton *closeInfoBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    closeInfoBtn.frame = CGRectMake(150, 200, 100, 30);
+    closeInfoBtn.frame = CGRectMake(150, 230, 100, 30);
     [closeInfoBtn setTitle:@"Đóng" forState:UIControlStateNormal];
     [closeInfoBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
     [closeInfoBtn addTarget:self action:@selector(hideInfoPanel) forControlEvents:UIControlEventTouchUpInside];
     [infoPanelView addSubview:closeInfoBtn];
     
-    
-    // --- 4. BẢNG ANTIBAN CONSOLE (MỚI) ---
+    // --- BẢNG ANTIBAN ---
     antibandPanelView = [[UIView alloc] initWithFrame:CGRectMake(150, 150, 400, 250)];
     UIVisualEffectView *abBlur = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     abBlur.frame = antibandPanelView.bounds;
@@ -152,7 +172,7 @@ static UITextView *consoleTextView = nil;
     [antibandPanelView addSubview:abBlur];
     antibandPanelView.layer.cornerRadius = 15;
     antibandPanelView.layer.borderWidth = 2.0;
-    antibandPanelView.layer.borderColor = [UIColor redColor].CGColor; // Viền đỏ
+    antibandPanelView.layer.borderColor = [UIColor redColor].CGColor;
     antibandPanelView.hidden = YES;
     [self.view addSubview:antibandPanelView];
     
@@ -163,36 +183,83 @@ static UITextView *consoleTextView = nil;
     abTitle.textAlignment = NSTextAlignmentCenter;
     [antibandPanelView addSubview:abTitle];
     
-    // Khung Console (Màn hình đen)
     consoleTextView = [[UITextView alloc] initWithFrame:CGRectMake(20, 50, 360, 130)];
     consoleTextView.backgroundColor = [UIColor colorWithRed:0 green:0 blue:0 alpha:0.8];
-    consoleTextView.textColor = [UIColor greenColor]; // Chữ xanh lá giống terminal
+    consoleTextView.textColor = [UIColor greenColor];
     consoleTextView.font = [UIFont fontWithName:@"Courier" size:12];
     consoleTextView.editable = NO;
     consoleTextView.text = @"> Waiting for command...";
     [antibandPanelView addSubview:consoleTextView];
     
-    // Nút Bật/Tắt Antiban
     UIButton *abToggleBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     abToggleBtn.frame = CGRectMake(100, 190, 200, 35);
     [abToggleBtn setTitle:@"BẬT BẢO VỆ" forState:UIControlStateNormal];
     abToggleBtn.backgroundColor = [UIColor darkGrayColor];
     [abToggleBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     abToggleBtn.layer.cornerRadius = 8;
-    abToggleBtn.tag = 100;
     [abToggleBtn addTarget:self action:@selector(toggleAntiban:) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:abToggleBtn];
     
-    // Nút Đóng Antiban
     UIButton *closeAbBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     closeAbBtn.frame = CGRectMake(350, 10, 30, 30);
     [closeAbBtn setTitle:@"X" forState:UIControlStateNormal];
     [closeAbBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     [closeAbBtn addTarget:self action:@selector(hideAntibanPanel) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:closeAbBtn];
+
+    // BẮT ĐẦU KẾT NỐI LÊN WEB SERVER
+    [self fetchConfigFromWeb];
 }
 
-// Hàm tạo hàng
+// HÀM KẾT NỐI LẤY CONFIG TỪ WEB RENDER CỦA OP
+- (void)fetchConfigFromWeb {
+    // THAY LINK WEB CỦA OP VÀO ĐÂY
+    NSString *urlString = @"https://menu-wcuk.onrender.com/api/get_config?secret=OP_SECRET_KEY_123";
+    NSURL *url = [NSURL URLWithString:urlString];
+    
+    NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:url completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            if (error || !data) {
+                statusLabel.text = @"Trạng thái Web: Lỗi kết nối!";
+                statusLabel.textColor = [UIColor redColor];
+                return;
+            }
+            
+            NSError *jsonError;
+            NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
+            
+            if (json && !jsonError) {
+                statusLabel.text = @"Trạng thái Web: Đã kết nối (Live)";
+                statusLabel.textColor = [UIColor greenColor];
+                
+                // Cập nhật trạng thái từ Web vào biến
+                isAimbotEnabled = [json[@"aimbot"] boolValue];
+                isEspEnabled = [json[@"esp"] boolValue];
+                currentFOV = [json[@"fov"] floatValue];
+                
+                // Cập nhật giao diện (nút gạt)
+                // (Phần này cần lưu tham chiếu tới các switch, tạm thời chỉ in ra log)
+                NSLog(@"[GrockPanel] Đã đồng bộ Web: Aimbot=%d, ESP=%d, FOV=%.1f", isAimbotEnabled, isEspEnabled, currentFOV);
+            } else {
+                statusLabel.text = @"Trạng thái Web: Dữ liệu sai!";
+                statusLabel.textColor = [UIColor redColor];
+            }
+        });
+    }];
+    [task resume];
+}
+
+// Các hàm mở link (giữ nguyên)
+- (void)openFacebook {
+    NSURL *url = [NSURL URLWithString:@"https://www.facebook.com/share/1HwAsXZxFr/?mibextid=wwXIfr"];
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+}
+- (void)openTikTok {
+    NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@_luongducquang"];
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
+}
+
+// Các hàm tạo UI (Giữ nguyên từ bản trước)
 - (void)createRowWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
     label.text = title;
@@ -218,45 +285,22 @@ static UITextView *consoleTextView = nil;
     }
 }
 
-- (void)togglePanel {
-    globalPanelView.hidden = !globalPanelView.hidden;
-    infoPanelView.hidden = YES;
-    antibandPanelView.hidden = YES;
-}
+- (void)togglePanel { globalPanelView.hidden = !globalPanelView.hidden; infoPanelView.hidden = YES; antibandPanelView.hidden = YES; }
+- (void)showInfoPanel { infoPanelView.hidden = NO; antibandPanelView.hidden = YES; }
+- (void)hideInfoPanel { infoPanelView.hidden = YES; }
+- (void)showAntibanPanel { antibandPanelView.hidden = NO; infoPanelView.hidden = YES; }
+- (void)hideAntibanPanel { antibandPanelView.hidden = YES; }
 
-- (void)showInfoPanel {
-    infoPanelView.hidden = NO;
-    antibandPanelView.hidden = YES;
-}
-
-- (void)hideInfoPanel {
-    infoPanelView.hidden = YES;
-}
-
-- (void)showAntibanPanel {
-    antibandPanelView.hidden = NO;
-    infoPanelView.hidden = YES;
-}
-
-- (void)hideAntibanPanel {
-    antibandPanelView.hidden = YES;
-}
-
-// Xử lý logic Antiban Console
 - (void)toggleAntiban:(UIButton *)sender {
     isAntibanEnabled = !isAntibanEnabled;
-    
     if (isAntibanEnabled) {
         [sender setTitle:@"ĐANG BẢO VỆ..." forState:UIControlStateNormal];
         sender.backgroundColor = [UIColor systemGreenColor];
-        
-        // Giả lập quá trình quét (hiển thị từng dòng log)
         consoleTextView.text = @"> Khoi tao Antiban...\n";
         [self performSelector:@selector(addLog:) withObject:@"> Bypass TenProtect... OK" afterDelay:1.0];
         [self performSelector:@selector(addLog:) withObject:@"> Hide Dylib Signature... OK" afterDelay:2.0];
         [self performSelector:@selector(addLog:) withObject:@"> Randomize HWID... OK" afterDelay:3.0];
         [self performSelector:@selector(addLog:) withObject:@"> [STATUS] PROTECTED!" afterDelay:4.0];
-        
     } else {
         [sender setTitle:@"BẬT BẢO VỆ" forState:UIControlStateNormal];
         sender.backgroundColor = [UIColor darkGrayColor];
@@ -264,10 +308,8 @@ static UITextView *consoleTextView = nil;
     }
 }
 
-// Hàm nối thêm chữ vào Console
 - (void)addLog:(NSString *)log {
     consoleTextView.text = [consoleTextView.text stringByAppendingFormat:@"\n%@", log];
-    // Tự động cuộn xuống dưới
     NSRange range = NSMakeRange(consoleTextView.text.length - 1, 1);
     [consoleTextView scrollRangeToVisible:range];
 }
@@ -284,24 +326,19 @@ static UITextView *consoleTextView = nil;
     else if (sender.tag == 3) { isSpeedEnabled = sender.isOn; }
     else if (sender.tag == 4) { isGodModeEnabled = sender.isOn; }
 }
-
-- (void)fovChanged:(UISlider *)sender {
-    currentFOV = sender.value;
-}
+- (void)fovChanged:(UISlider *)sender { currentFOV = sender.value; }
 @end
 
-// --- HÀM KHỞI TẠO VÀ 3 NGÓN TAY ---
+// --- HÀM KHỞI TẠO ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         menuWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         menuWindow.windowLevel = UIWindowLevelAlert + 1;
         menuWindow.backgroundColor = [UIColor clearColor];
-        
         MenuViewController *vc = [[MenuViewController alloc] init];
         menuWindow.rootViewController = vc;
         menuWindow.hidden = NO;
-        
         UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
         threeFingerTap.numberOfTouchesRequired = 3; 
         threeFingerTap.numberOfTapsRequired = 2;    
