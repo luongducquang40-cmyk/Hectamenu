@@ -1,8 +1,10 @@
 #import <UIKit/UIKit.h>
 
-// --- BIẾN TOÀN CỤC ---
+// --- BIẾN TOÀN CỤC (Lưu trạng thái) ---
 static BOOL isAimbotEnabled = NO;
 static BOOL isEspEnabled = NO;
+static BOOL isSpeedEnabled = NO;
+static BOOL isGodModeEnabled = NO;
 static float currentFOV = 90.0;
 static UIWindow *menuWindow = nil;
 static UIImageView *globalLogoBtn = nil;
@@ -32,13 +34,12 @@ static UIView *globalPanelView = nil;
     
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePanel)];
     [globalLogoBtn addGestureRecognizer:tapGesture];
-    
     UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
     
-    // 2. TẠO BẢNG MENU
-    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(100, 100, 280, 450)];
+    // 2. TẠO BẢNG MENU (Tăng chiều cao lên để chứa thêm nút)
+    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(100, 80, 280, 520)];
     
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
@@ -53,19 +54,20 @@ static UIView *globalPanelView = nil;
     globalPanelView.hidden = YES;
     globalPanelView.userInteractionEnabled = YES;
     
+    // Kéo thả bảng menu
     UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalPanelView addGestureRecognizer:panelPan];
     [self.view addSubview:globalPanelView];
     
     // Logo trong menu
-    UIImageView *innerLogo = [[UIImageView alloc] initWithFrame:CGRectMake(65, 20, 150, 150)];
+    UIImageView *innerLogo = [[UIImageView alloc] initWithFrame:CGRectMake(65, 15, 150, 150)];
     if (data) { innerLogo.image = [UIImage imageWithData:data]; }
     innerLogo.contentMode = UIViewContentModeScaleAspectFit;
     innerLogo.layer.cornerRadius = 75;
     innerLogo.clipsToBounds = YES;
     [globalPanelView addSubview:innerLogo];
     
-    // Nút X
+    // Nút X (Đóng)
     UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     closeBtn.frame = CGRectMake(240, 10, 30, 30);
     [closeBtn setTitle:@"X" forState:UIControlStateNormal];
@@ -75,16 +77,18 @@ static UIView *globalPanelView = nil;
     [globalPanelView addSubview:closeBtn];
     
     // Tiêu đề
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 180, 280, 30)];
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 170, 280, 30)];
     title.text = @"GROCK PANEL";
     title.textColor = [UIColor colorWithWhite:0.9 alpha:1.0];
     title.font = [UIFont boldSystemFontOfSize:22];
     title.textAlignment = NSTextAlignmentCenter;
     [globalPanelView addSubview:title];
     
-    // Nút Aimbot
+    // --- CÁC NÚT CHỨC NĂNG ---
+    
+    // 1. Aimbot
     UIButton *aimbotBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    aimbotBtn.frame = CGRectMake(20, 230, 240, 45);
+    aimbotBtn.frame = CGRectMake(20, 215, 240, 40);
     [aimbotBtn setTitle:@"Aimbot: OFF" forState:UIControlStateNormal];
     aimbotBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
     [aimbotBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
@@ -93,9 +97,9 @@ static UIView *globalPanelView = nil;
     [aimbotBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
     [globalPanelView addSubview:aimbotBtn];
     
-    // Nút ESP
+    // 2. ESP
     UIButton *espBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    espBtn.frame = CGRectMake(20, 290, 240, 45);
+    espBtn.frame = CGRectMake(20, 265, 240, 40);
     [espBtn setTitle:@"ESP: OFF" forState:UIControlStateNormal];
     espBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
     [espBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
@@ -104,15 +108,37 @@ static UIView *globalPanelView = nil;
     [espBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
     [globalPanelView addSubview:espBtn];
     
-    // FOV
-    UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 350, 240, 20)];
+    // 3. Speed Hack
+    UIButton *speedBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    speedBtn.frame = CGRectMake(20, 315, 240, 40);
+    [speedBtn setTitle:@"Speed: OFF" forState:UIControlStateNormal];
+    speedBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
+    [speedBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
+    speedBtn.layer.cornerRadius = 8;
+    speedBtn.tag = 3;
+    [speedBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:speedBtn];
+    
+    // 4. God Mode
+    UIButton *godBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    godBtn.frame = CGRectMake(20, 365, 240, 40);
+    [godBtn setTitle:@"God Mode: OFF" forState:UIControlStateNormal];
+    godBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
+    [godBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
+    godBtn.layer.cornerRadius = 8;
+    godBtn.tag = 4;
+    [godBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:godBtn];
+    
+    // 5. Thanh trượt FOV
+    UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 415, 240, 20)];
     fovLabel.text = @"FOV: 90";
     fovLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
     fovLabel.font = [UIFont systemFontOfSize:16];
     fovLabel.tag = 100;
     [globalPanelView addSubview:fovLabel];
     
-    UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(20, 380, 240, 20)];
+    UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(20, 445, 240, 20)];
     fovSlider.minimumValue = 10;
     fovSlider.maximumValue = 180;
     fovSlider.value = 90;
@@ -132,17 +158,18 @@ static UIView *globalPanelView = nil;
 }
 
 - (void)toggleBtnState:(UIButton *)sender {
-    if (sender.tag == 1) {
-        isAimbotEnabled = !isAimbotEnabled;
-        [sender setTitle:isAimbotEnabled ? @"Aimbot: ON" : @"Aimbot: OFF" forState:UIControlStateNormal];
-        sender.backgroundColor = isAimbotEnabled ? [UIColor colorWithWhite:0.8 alpha:1.0] : [UIColor colorWithWhite:0.2 alpha:0.8];
-        [sender setTitleColor:isAimbotEnabled ? [UIColor blackColor] : [UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    } else {
-        isEspEnabled = !isEspEnabled;
-        [sender setTitle:isEspEnabled ? @"ESP: ON" : @"ESP: OFF" forState:UIControlStateNormal];
-        sender.backgroundColor = isEspEnabled ? [UIColor colorWithWhite:0.8 alpha:1.0] : [UIColor colorWithWhite:0.2 alpha:0.8];
-        [sender setTitleColor:isEspEnabled ? [UIColor blackColor] : [UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    }
+    BOOL isEnabled = !sender.isSelected;
+    [sender setSelected:isEnabled];
+    
+    NSString *title = @"";
+    if (sender.tag == 1) { isAimbotEnabled = isEnabled; title = isEnabled ? @"Aimbot: ON" : @"Aimbot: OFF"; }
+    else if (sender.tag == 2) { isEspEnabled = isEnabled; title = isEnabled ? @"ESP: ON" : @"ESP: OFF"; }
+    else if (sender.tag == 3) { isSpeedEnabled = isEnabled; title = isEnabled ? @"Speed: ON" : @"Speed: OFF"; }
+    else if (sender.tag == 4) { isGodModeEnabled = isEnabled; title = isEnabled ? @"God Mode: ON" : @"God Mode: OFF"; }
+    
+    [sender setTitle:title forState:UIControlStateNormal];
+    sender.backgroundColor = isEnabled ? [UIColor colorWithWhite:0.8 alpha:1.0] : [UIColor colorWithWhite:0.2 alpha:0.8];
+    [sender setTitleColor:isEnabled ? [UIColor blackColor] : [UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
 }
 
 - (void)fovChanged:(UISlider *)sender {
@@ -152,7 +179,7 @@ static UIView *globalPanelView = nil;
 }
 @end
 
-// --- HÀM KHỞI TẠO VÀ CƠ CHẾ 3 NGÓN TAY ---
+// --- HÀM KHỞI TẠO VÀ 3 NGÓN TAY ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
@@ -164,29 +191,22 @@ static void setupMenu() {
         menuWindow.rootViewController = vc;
         menuWindow.hidden = NO;
         
-        // CƠ CHẾ 3 NGÓN TAY CHẠM 2 LẦN
         UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
-        threeFingerTap.numberOfTouchesRequired = 3; // Yêu cầu 3 ngón tay
-        threeFingerTap.numberOfTapsRequired = 2;    // Chạm 2 lần
+        threeFingerTap.numberOfTouchesRequired = 3; 
+        threeFingerTap.numberOfTapsRequired = 2;    
         [menuWindow addGestureRecognizer:threeFingerTap];
     });
 }
 
-// Thêm hàm xử lý 3 ngón tay vào MenuViewController
 @interface MenuViewController (Gesture)
 - (void)handleThreeFingerTap;
 @end
 
 @implementation MenuViewController (Gesture)
 - (void)handleThreeFingerTap {
-    // Ẩn/hiện cả Logo và Bảng Menu
     BOOL isHidden = globalLogoBtn.hidden;
     globalLogoBtn.hidden = !isHidden;
-    globalPanelView.hidden = YES; // Khi ẩn Logo thì ẩn luôn bảng Menu
-    
-    // Nếu đang ẩn mà bật lên thì hiện Logo thôi
-    if (isHidden) {
-        globalLogoBtn.hidden = NO;
-    }
+    globalPanelView.hidden = YES; 
+    if (isHidden) { globalLogoBtn.hidden = NO; }
 }
 @end
