@@ -7,5 +7,6 @@ include $(THEOS)/makefiles/common.mk
 TWEAK_NAME = MyMenu
 MyMenu_FILES = Tweak.x
 MyMenu_CFLAGS = -fobjc-arc
+MyMenu_FRAMEWORKS = UIKit Foundation
 
 include $(THEOS_MAKE_PATH)/tweak.mk
