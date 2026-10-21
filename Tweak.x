@@ -124,18 +124,28 @@ static UILabel *statusLabel = nil;
 }
 @end
 
-// --- THAY ĐỔI CỐT LÕI Ở ĐÂY ---
+// --- HÀM KHỞI TẠO (ĐÃ SỬA LỖI KEYWINDOW) ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        UIWindow *window = [UIApplication sharedApplication].keyWindow;
+        
+        // LẤY WINDOW CHUẨN CHO iOS 17+
+        UIWindow *window = nil;
+        for (UIWindowScene *scene in [UIApplication sharedApplication].connectedScenes) {
+            if (scene.activationState == UISceneActivationStateForegroundActive) {
+                for (UIWindow *w in scene.windows) {
+                    if (w.isKeyWindow) {
+                        window = w;
+                        break;
+                    }
+                }
+            }
+        }
+        
         if (!window) return;
 
         MenuViewController *vc = [[MenuViewController alloc] init];
         vc.view.frame = window.bounds;
-        
-        // BÍ QUYẾT NẰM Ở DÒNG NÀY:
-        // Chỉ cho phép các nút (subviews) nhận chạm, còn view nền thì không
         vc.view.userInteractionEnabled = YES; 
         
         [window addSubview:vc.view];
