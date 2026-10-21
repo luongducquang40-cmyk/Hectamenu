@@ -46,7 +46,7 @@ static UISlider *fovSliderRef = nil;
     
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePanel)];
     [globalLogoBtn addGestureRecognizer:tapGesture];
-    UIPanGestureRecognizer *panGesture [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
     
@@ -118,7 +118,6 @@ static UISlider *fovSliderRef = nil;
     [globalPanelView addSubview:infoBtn];
     
     // --- BẢNG THÔNG TIN ---
-    // (Giữ nguyên phần thông tin và các nút mạng xã hội như cũ)
     infoPanelView = [[UIView alloc] initWithFrame:CGRectMake(150, 150, 400, 300)];
     UIVisualEffectView *infoBlur = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     infoBlur.frame = infoPanelView.bounds;
