@@ -1,6 +1,6 @@
 #import <UIKit/UIKit.h>
 
-// --- BIẾN TOÀN CỤC (Lưu trạng thái) ---
+// --- BIẾN TOÀN CỤC ---
 static BOOL isAimbotEnabled = NO;
 static BOOL isEspEnabled = NO;
 static BOOL isSpeedEnabled = NO;
@@ -10,7 +10,7 @@ static UIWindow *menuWindow = nil;
 static UIImageView *globalLogoBtn = nil;
 static UIView *globalPanelView = nil;
 
-// --- GIAO DIỆN MENU ---
+// --- GIAO DIỆN MENU (NẰM NGANG) ---
 @interface MenuViewController : UIViewController
 @end
 
@@ -20,7 +20,7 @@ static UIView *globalPanelView = nil;
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor clearColor];
     
-    // 1. TẠO NÚT LOGO
+    // 1. NÚT LOGO NỔI
     globalLogoBtn = [[UIImageView alloc] initWithFrame:CGRectMake(20, 100, 70, 70)];
     NSURL *url = [NSURL URLWithString:@"https://i.ibb.co/zTKMP8nv/image.png"];
     NSData *data = [NSData dataWithContentsOfURL:url];
@@ -38,9 +38,10 @@ static UIView *globalPanelView = nil;
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
     
-    // 2. TẠO BẢNG MENU (Tăng chiều cao lên để chứa thêm nút)
-    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(100, 80, 280, 520)];
+    // 2. BẢNG MENU NẰM NGANG (Kích thước 600x350)
+    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 350)];
     
+    // Nền mờ
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     blurView.frame = globalPanelView.bounds;
@@ -49,102 +50,91 @@ static UIView *globalPanelView = nil;
     [globalPanelView addSubview:blurView];
     
     globalPanelView.layer.cornerRadius = 15;
-    globalPanelView.layer.borderWidth = 1.5;
-    globalPanelView.layer.borderColor = [UIColor colorWithWhite:0.5 alpha:0.5].CGColor;
+    globalPanelView.layer.borderWidth = 2.0;
+    globalPanelView.layer.borderColor = [UIColor cyanColor].CGColor; // Viền xanh giống ảnh 2
     globalPanelView.hidden = YES;
     globalPanelView.userInteractionEnabled = YES;
     
-    // Kéo thả bảng menu
     UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalPanelView addGestureRecognizer:panelPan];
     [self.view addSubview:globalPanelView];
     
-    // Logo trong menu
-    UIImageView *innerLogo = [[UIImageView alloc] initWithFrame:CGRectMake(65, 15, 150, 150)];
-    if (data) { innerLogo.image = [UIImage imageWithData:data]; }
-    innerLogo.contentMode = UIViewContentModeScaleAspectFit;
-    innerLogo.layer.cornerRadius = 75;
-    innerLogo.clipsToBounds = YES;
-    [globalPanelView addSubview:innerLogo];
-    
-    // Nút X (Đóng)
-    UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    closeBtn.frame = CGRectMake(240, 10, 30, 30);
-    [closeBtn setTitle:@"X" forState:UIControlStateNormal];
-    [closeBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
-    closeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:20];
-    [closeBtn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
-    [globalPanelView addSubview:closeBtn];
-    
-    // Tiêu đề
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 170, 280, 30)];
-    title.text = @"GROCK PANEL";
-    title.textColor = [UIColor colorWithWhite:0.9 alpha:1.0];
-    title.font = [UIFont boldSystemFontOfSize:22];
+    // Tiêu đề (Giống ảnh 2)
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 0, 600, 40)];
+    title.text = @"GROCK PANEL STORE";
+    title.backgroundColor = [UIColor colorWithRed:0.1 green:0.5 blue:0.8 alpha:1.0]; // Màu xanh header
+    title.textColor = [UIColor whiteColor];
+    title.font = [UIFont boldSystemFontOfSize:18];
     title.textAlignment = NSTextAlignmentCenter;
     [globalPanelView addSubview:title];
     
-    // --- CÁC NÚT CHỨC NĂNG ---
+    // Nút X (Đóng)
+    UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    closeBtn.frame = CGRectMake(560, 5, 30, 30);
+    [closeBtn setTitle:@"X" forState:UIControlStateNormal];
+    [closeBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    closeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:18];
+    [closeBtn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:closeBtn];
     
-    // 1. Aimbot
-    UIButton *aimbotBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    aimbotBtn.frame = CGRectMake(20, 215, 240, 40);
-    [aimbotBtn setTitle:@"Aimbot: OFF" forState:UIControlStateNormal];
-    aimbotBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [aimbotBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    aimbotBtn.layer.cornerRadius = 8;
-    aimbotBtn.tag = 1;
-    [aimbotBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [globalPanelView addSubview:aimbotBtn];
+    // Hàm tạo hàng (Row)
+    int startY = 50;
+    int spacing = 40;
     
-    // 2. ESP
-    UIButton *espBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    espBtn.frame = CGRectMake(20, 265, 240, 40);
-    [espBtn setTitle:@"ESP: OFF" forState:UIControlStateNormal];
-    espBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [espBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    espBtn.layer.cornerRadius = 8;
-    espBtn.tag = 2;
-    [espBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [globalPanelView addSubview:espBtn];
+    // Row 1: Aimbot
+    [self createRowWithTitle:@"Aimbot" tag:1 yPos:startY];
+    // Row 2: ESP
+    [self createRowWithTitle:@"ESP" tag:2 yPos:startY + spacing];
+    // Row 3: Speed
+    [self createRowWithTitle:@"Speed Hack" tag:3 yPos:startY + spacing * 2];
+    // Row 4: God Mode
+    [self createRowWithTitle:@"God Mode" tag:4 yPos:startY + spacing * 3];
+    // Row 5: FOV
+    [self createRowWithTitle:@"FOV Slider" tag:5 yPos:startY + spacing * 4];
     
-    // 3. Speed Hack
-    UIButton *speedBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    speedBtn.frame = CGRectMake(20, 315, 240, 40);
-    [speedBtn setTitle:@"Speed: OFF" forState:UIControlStateNormal];
-    speedBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [speedBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    speedBtn.layer.cornerRadius = 8;
-    speedBtn.tag = 3;
-    [speedBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [globalPanelView addSubview:speedBtn];
+    // Nút "AIM" và "SETTINGS" ở dưới cùng
+    UIButton *aimBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    aimBtn.frame = CGRectMake(20, 300, 270, 35);
+    [aimBtn setTitle:@"AIM" forState:UIControlStateNormal];
+    aimBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+    [aimBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [globalPanelView addSubview:aimBtn];
     
-    // 4. God Mode
-    UIButton *godBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    godBtn.frame = CGRectMake(20, 365, 240, 40);
-    [godBtn setTitle:@"God Mode: OFF" forState:UIControlStateNormal];
-    godBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [godBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    godBtn.layer.cornerRadius = 8;
-    godBtn.tag = 4;
-    [godBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [globalPanelView addSubview:godBtn];
+    UIButton *setBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    setBtn.frame = CGRectMake(310, 300, 270, 35);
+    [setBtn setTitle:@"SETTINGS" forState:UIControlStateNormal];
+    setBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:1.0];
+    [setBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
+    [globalPanelView addSubview:setBtn];
+}
+
+// Hàm tạo từng hàng (Text + Switch)
+- (void)createRowWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
+    // Chữ
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
+    label.text = title;
+    label.textColor = [UIColor whiteColor];
+    label.font = [UIFont systemFontOfSize:16];
+    [globalPanelView addSubview:label];
     
-    // 5. Thanh trượt FOV
-    UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 415, 240, 20)];
-    fovLabel.text = @"FOV: 90";
-    fovLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
-    fovLabel.font = [UIFont systemFontOfSize:16];
-    fovLabel.tag = 100;
-    [globalPanelView addSubview:fovLabel];
-    
-    UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(20, 445, 240, 20)];
-    fovSlider.minimumValue = 10;
-    fovSlider.maximumValue = 180;
-    fovSlider.value = 90;
-    fovSlider.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
-    [fovSlider addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
-    [globalPanelView addSubview:fovSlider];
+    if (tag != 5) {
+        // Nút gạt (Toggle Switch)
+        UISwitch *toggle = [[UISwitch alloc] initWithFrame:CGRectMake(530, y, 50, 30)];
+        toggle.tag = tag;
+        toggle.onTintColor = [UIColor cyanColor]; // Màu xanh cyan
+        [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+        [globalPanelView addSubview:toggle];
+    } else {
+        // Thanh trượt FOV
+        UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(350, y+5, 220, 20)];
+        slider.minimumValue = 10;
+        slider.maximumValue = 180;
+        slider.value = 90;
+        slider.tag = 100;
+        slider.tintColor = [UIColor cyanColor];
+        [slider addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
+        [globalPanelView addSubview:slider];
+    }
 }
 
 - (void)togglePanel {
@@ -157,25 +147,16 @@ static UIView *globalPanelView = nil;
     [sender setTranslation:CGPointZero inView:self.view];
 }
 
-- (void)toggleBtnState:(UIButton *)sender {
-    BOOL isEnabled = !sender.isSelected;
-    [sender setSelected:isEnabled];
-    
-    NSString *title = @"";
-    if (sender.tag == 1) { isAimbotEnabled = isEnabled; title = isEnabled ? @"Aimbot: ON" : @"Aimbot: OFF"; }
-    else if (sender.tag == 2) { isEspEnabled = isEnabled; title = isEnabled ? @"ESP: ON" : @"ESP: OFF"; }
-    else if (sender.tag == 3) { isSpeedEnabled = isEnabled; title = isEnabled ? @"Speed: ON" : @"Speed: OFF"; }
-    else if (sender.tag == 4) { isGodModeEnabled = isEnabled; title = isEnabled ? @"God Mode: ON" : @"God Mode: OFF"; }
-    
-    [sender setTitle:title forState:UIControlStateNormal];
-    sender.backgroundColor = isEnabled ? [UIColor colorWithWhite:0.8 alpha:1.0] : [UIColor colorWithWhite:0.2 alpha:0.8];
-    [sender setTitleColor:isEnabled ? [UIColor blackColor] : [UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
+// Xử lý khi gạt công tắc
+- (void)switchChanged:(UISwitch *)sender {
+    if (sender.tag == 1) { isAimbotEnabled = sender.isOn; }
+    else if (sender.tag == 2) { isEspEnabled = sender.isOn; }
+    else if (sender.tag == 3) { isSpeedEnabled = sender.isOn; }
+    else if (sender.tag == 4) { isGodModeEnabled = sender.isOn; }
 }
 
 - (void)fovChanged:(UISlider *)sender {
     currentFOV = sender.value;
-    UILabel *label = [globalPanelView viewWithTag:100];
-    label.text = [NSString stringWithFormat:@"FOV: %.0f", currentFOV];
 }
 @end
 
