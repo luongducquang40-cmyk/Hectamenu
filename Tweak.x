@@ -21,7 +21,7 @@ static UISwitch *speedSwitch = nil;
 static UISwitch *godSwitch = nil;
 static UISlider *fovSliderRef = nil;
 
-// --- LỚP VIEW XUYÊN THẤU (QUAN TRỌNG NHẤT) ---
+// --- LỚP VIEW XUYÊN THẤU (SỬA LỖI CHẶN CHẠM) ---
 @interface PassthroughView : UIView
 @end
 @implementation PassthroughView
@@ -57,6 +57,7 @@ static UISlider *fovSliderRef = nil;
     
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePanel)];
     [globalLogoBtn addGestureRecognizer:tapGesture];
+    
     UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
@@ -76,7 +77,7 @@ static UISlider *fovSliderRef = nil;
     globalPanelView.hidden = YES;
     globalPanelView.userInteractionEnabled = YES;
     
-    UIPanGestureRecognizer *panelPan [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalPanelView addGestureRecognizer:panelPan];
     [self.view addSubview:globalPanelView];
     
@@ -223,6 +224,10 @@ static UISlider *fovSliderRef = nil;
     [closeAbBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     [closeAbBtn addTarget:self action:@selector(hideAntibanPanel) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:closeAbBtn];
+
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        [self fetchConfigFromWeb];
+    });
 }
 
 // Hàm lấy config từ web
