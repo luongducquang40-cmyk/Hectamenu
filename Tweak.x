@@ -7,6 +7,7 @@ static BOOL isSpeedEnabled = NO;
 static BOOL isGodModeEnabled = NO;
 static BOOL isAntibanEnabled = NO;
 static float currentFOV = 90.0;
+static UIWindow *menuWindow = nil;
 static UIImageView *globalLogoBtn = nil;
 static UIView *globalPanelView = nil;
 static UIView *infoPanelView = nil;
@@ -20,6 +21,17 @@ static UISwitch *speedSwitch = nil;
 static UISwitch *godSwitch = nil;
 static UISlider *fovSliderRef = nil;
 
+// --- LỚP VIEW XUYÊN THẤU (QUAN TRỌNG NHẤT) ---
+@interface PassthroughView : UIView
+@end
+@implementation PassthroughView
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hitView = [super hitTest:point withEvent:event];
+    if (hitView == self) return nil; // Trả về nil để chạm xuyên qua game
+    return hitView;
+}
+@end
+
 // --- GIAO DIỆN MENU ---
 @interface MenuViewController : UIViewController
 @end
@@ -29,8 +41,9 @@ static UISlider *fovSliderRef = nil;
 - (void)viewDidLoad {
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor clearColor];
+    self.view.userInteractionEnabled = YES;
     
-    // TẠO NÚT LOGO
+    // 1. NÚT LOGO NỔI
     globalLogoBtn = [[UIImageView alloc] initWithFrame:CGRectMake(20, 100, 70, 70)];
     NSURL *url = [NSURL URLWithString:@"https://i.ibb.co/zTKMP8nv/image.png"];
     NSData *data = [NSData dataWithContentsOfURL:url];
@@ -48,7 +61,7 @@ static UISlider *fovSliderRef = nil;
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
     
-    // TẠO BẢNG MENU
+    // 2. BẢNG MENU CHÍNH
     globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 380)];
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
@@ -63,7 +76,7 @@ static UISlider *fovSliderRef = nil;
     globalPanelView.hidden = YES;
     globalPanelView.userInteractionEnabled = YES;
     
-    UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    UIPanGestureRecognizer *panelPan [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalPanelView addGestureRecognizer:panelPan];
     [self.view addSubview:globalPanelView];
     
@@ -200,7 +213,6 @@ static UISlider *fovSliderRef = nil;
     abToggleBtn.frame = CGRectMake(100, 190, 200, 35);
     [abToggleBtn setTitle:@"BẬT BẢO VỆ" forState:UIControlStateNormal];
     abToggleBtn.backgroundColor = [UIColor darkGrayColor];
-    abToggleBtn.backgroundColor = [UIColor darkGrayColor];
     abToggleBtn.layer.cornerRadius = 8;
     [abToggleBtn addTarget:self action:@selector(toggleAntiban:) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:abToggleBtn];
@@ -211,12 +223,9 @@ static UISlider *fovSliderRef = nil;
     [closeAbBtn setTitleColor:[UIColor whiteColor] forState:UIControlStateNormal];
     [closeAbBtn addTarget:self action:@selector(hideAntibanPanel) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:closeAbBtn];
-
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        [self fetchConfigFromWeb];
-    });
 }
 
+// Hàm lấy config từ web
 - (void)fetchConfigFromWeb {
     NSString *urlString = @"https://menu-wcuk.onrender.com/api/get_config?secret=OP_SECRET_KEY_123";
     NSURL *url = [NSURL URLWithString:urlString];
@@ -336,24 +345,30 @@ static UISlider *fovSliderRef = nil;
 - (void)fovChanged:(UISlider *)sender { currentFOV = sender.value; }
 @end
 
-// --- HÀM KHỞI TẠO (GẮN TRỰC TIẾP VÀO GAME WINDOW) ---
+// --- HÀM KHỞI TẠO VÀ 3 NGÓN TAY ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-        // Lấy cửa sổ chính của game
-        UIWindow *gameWindow = [[UIApplication sharedApplication] windows].firstObject;
-        if (!gameWindow) return;
-
+        menuWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
+        menuWindow.windowLevel = UIWindowLevelAlert + 1;
+        menuWindow.backgroundColor = [UIColor clearColor];
+        
+        PassthroughView *rootView = [[PassthroughView alloc] initWithFrame:menuWindow.bounds];
+        rootView.backgroundColor = [UIColor clearColor];
+        rootView.userInteractionEnabled = YES;
+        
         MenuViewController *vc = [[MenuViewController alloc] init];
-        vc.view.frame = gameWindow.bounds;
+        vc.view.frame = rootView.bounds;
+        [rootView addSubview:vc.view];
         
-        [gameWindow addSubview:vc.view];
+        menuWindow.rootViewController = vc;
+        [menuWindow addSubview:rootView];
+        menuWindow.hidden = NO;
         
-        // Bắt sự kiện 3 ngón tay trên gameWindow
         UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
         threeFingerTap.numberOfTouchesRequired = 3; 
         threeFingerTap.numberOfTapsRequired = 2;    
-        [gameWindow addGestureRecognizer:threeFingerTap];
+        [menuWindow addGestureRecognizer:threeFingerTap];
     });
 }
 
