@@ -13,7 +13,14 @@ static UIView *globalPanelView = nil;
 static UIView *infoPanelView = nil;
 static UIView *antibandPanelView = nil;
 static UITextView *consoleTextView = nil;
-static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết nối Web
+static UILabel *statusLabel = nil;
+
+// Lưu tham chiếu các nút gạt để cập nhật từ Web
+static UISwitch *aimbotSwitch = nil;
+static UISwitch *espSwitch = nil;
+static UISwitch *speedSwitch = nil;
+static UISwitch *godSwitch = nil;
+static UISlider *fovSliderRef = nil;
 
 // --- GIAO DIỆN MENU ---
 @interface MenuViewController : UIViewController
@@ -39,12 +46,12 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePanel)];
     [globalLogoBtn addGestureRecognizer:tapGesture];
-    UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    UIPanGestureRecognizer *panGesture [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
     [globalLogoBtn addGestureRecognizer:panGesture];
     [self.view addSubview:globalLogoBtn];
     
     // 2. BẢNG MENU CHÍNH
-    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 380)]; // Tăng chiều cao để chứa label
+    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(50, 100, 600, 380)];
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     blurView.frame = globalPanelView.bounds;
@@ -78,7 +85,6 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     [closeBtn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
     [globalPanelView addSubview:closeBtn];
     
-    // Label trạng thái kết nối Server
     statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 45, 560, 20)];
     statusLabel.text = @"Trạng thái Web: Đang kết nối...";
     statusLabel.textColor = [UIColor yellowColor];
@@ -87,11 +93,13 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     
     int startY = 70;
     int spacing = 40;
-    [self createRowWithTitle:@"Aimbot" tag:1 yPos:startY];
-    [self createRowWithTitle:@"ESP" tag:2 yPos:startY + spacing];
-    [self createRowWithTitle:@"Speed Hack" tag:3 yPos:startY + spacing * 2];
-    [self createRowWithTitle:@"God Mode" tag:4 yPos:startY + spacing * 3];
-    [self createRowWithTitle:@"FOV Slider" tag:5 yPos:startY + spacing * 4];
+    
+    // Lưu tham chiếu các nút gạt
+    aimbotSwitch = [self createRowWithTitle:@"Aimbot" tag:1 yPos:startY];
+    espSwitch = [self createRowWithTitle:@"ESP" tag:2 yPos:startY + spacing];
+    speedSwitch = [self createRowWithTitle:@"Speed Hack" tag:3 yPos:startY + spacing * 2];
+    godSwitch = [self createRowWithTitle:@"God Mode" tag:4 yPos:startY + spacing * 3];
+    fovSliderRef = [self createSliderWithTitle:@"FOV Slider" tag:5 yPos:startY + spacing * 4];
     
     UIButton *antibanBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     antibanBtn.frame = CGRectMake(20, 320, 270, 35);
@@ -110,6 +118,7 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     [globalPanelView addSubview:infoBtn];
     
     // --- BẢNG THÔNG TIN ---
+    // (Giữ nguyên phần thông tin và các nút mạng xã hội như cũ)
     infoPanelView = [[UIView alloc] initWithFrame:CGRectMake(150, 150, 400, 300)];
     UIVisualEffectView *infoBlur = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
     infoBlur.frame = infoPanelView.bounds;
@@ -207,13 +216,12 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     [closeAbBtn addTarget:self action:@selector(hideAntibanPanel) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:closeAbBtn];
 
-    // BẮT ĐẦU KẾT NỐI LÊN WEB SERVER
+    // GỌI HÀM LẤY CONFIG TỪ WEB
     [self fetchConfigFromWeb];
 }
 
-// HÀM KẾT NỐI LẤY CONFIG TỪ WEB RENDER CỦA OP
+// HÀM KẾT NỐI WEB VÀ CẬP NHẬT NÚT GẠT
 - (void)fetchConfigFromWeb {
-    // THAY LINK WEB CỦA OP VÀO ĐÂY
     NSString *urlString = @"https://menu-wcuk.onrender.com/api/get_config?secret=OP_SECRET_KEY_123";
     NSURL *url = [NSURL URLWithString:urlString];
     
@@ -232,14 +240,21 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
                 statusLabel.text = @"Trạng thái Web: Đã kết nối (Live)";
                 statusLabel.textColor = [UIColor greenColor];
                 
-                // Cập nhật trạng thái từ Web vào biến
-                isAimbotEnabled = [json[@"aimbot"] boolValue];
-                isEspEnabled = [json[@"esp"] boolValue];
-                currentFOV = [json[@"fov"] floatValue];
+                // Lấy dữ liệu
+                BOOL webAimbot = [json[@"aimbot"] boolValue];
+                BOOL webEsp = [json[@"esp"] boolValue];
+                float webFov = [json[@"fov"] floatValue];
                 
-                // Cập nhật giao diện (nút gạt)
-                // (Phần này cần lưu tham chiếu tới các switch, tạm thời chỉ in ra log)
-                NSLog(@"[GrockPanel] Đã đồng bộ Web: Aimbot=%d, ESP=%d, FOV=%.1f", isAimbotEnabled, isEspEnabled, currentFOV);
+                // Cập nhật trạng thái các nút gạt (UISwitch)
+                [aimbotSwitch setOn:webAimbot animated:YES];
+                [espSwitch setOn:webEsp animated:YES];
+                fovSliderRef.value = webFov;
+                
+                // Cập nhật biến toàn cục
+                isAimbotEnabled = webAimbot;
+                isEspEnabled = webEsp;
+                currentFOV = webFov;
+                
             } else {
                 statusLabel.text = @"Trạng thái Web: Dữ liệu sai!";
                 statusLabel.textColor = [UIColor redColor];
@@ -249,42 +264,44 @@ static UILabel *statusLabel = nil; // Label hiển thị trạng thái kết n�
     [task resume];
 }
 
-// Các hàm mở link (giữ nguyên)
-- (void)openFacebook {
-    NSURL *url = [NSURL URLWithString:@"https://www.facebook.com/share/1HwAsXZxFr/?mibextid=wwXIfr"];
-    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-}
-- (void)openTikTok {
-    NSURL *url = [NSURL URLWithString:@"https://www.tiktok.com/@_luongducquang"];
-    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-}
-
-// Các hàm tạo UI (Giữ nguyên từ bản trước)
-- (void)createRowWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
+// Hàm tạo hàng gạt (trả về UISwitch để lưu tham chiếu)
+- (UISwitch *)createRowWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
     label.text = title;
     label.textColor = [UIColor whiteColor];
     label.font = [UIFont systemFontOfSize:16];
     [globalPanelView addSubview:label];
     
-    if (tag != 5) {
-        UISwitch *toggle = [[UISwitch alloc] initWithFrame:CGRectMake(530, y, 50, 30)];
-        toggle.tag = tag;
-        toggle.onTintColor = [UIColor cyanColor];
-        [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
-        [globalPanelView addSubview:toggle];
-    } else {
-        UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(350, y+5, 220, 20)];
-        slider.minimumValue = 10;
-        slider.maximumValue = 180;
-        slider.value = 90;
-        slider.tag = 100;
-        slider.tintColor = [UIColor cyanColor];
-        [slider addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
-        [globalPanelView addSubview:slider];
-    }
+    UISwitch *toggle = [[UISwitch alloc] initWithFrame:CGRectMake(530, y, 50, 30)];
+    toggle.tag = tag;
+    toggle.onTintColor = [UIColor cyanColor];
+    [toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+    [globalPanelView addSubview:toggle];
+    return toggle;
 }
 
+// Hàm tạo thanh trượt FOV
+- (UISlider *)createSliderWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
+    UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
+    label.text = title;
+    label.textColor = [UIColor whiteColor];
+    label.font = [UIFont systemFontOfSize:16];
+    [globalPanelView addSubview:label];
+    
+    UISlider *slider = [[UISlider alloc] initWithFrame:CGRectMake(350, y+5, 220, 20)];
+    slider.minimumValue = 10;
+    slider.maximumValue = 180;
+    slider.value = 90;
+    slider.tag = tag;
+    slider.tintColor = [UIColor cyanColor];
+    [slider addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
+    [globalPanelView addSubview:slider];
+    return slider;
+}
+
+// Các hàm còn lại giữ nguyên
+- (void)openFacebook { [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.facebook.com/share/1HwAsXZxFr/?mibextid=wwXIfr"] options:@{} completionHandler:nil]; }
+- (void)openTikTok { [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.tiktok.com/@_luongducquang"] options:@{} completionHandler:nil]; }
 - (void)togglePanel { globalPanelView.hidden = !globalPanelView.hidden; infoPanelView.hidden = YES; antibandPanelView.hidden = YES; }
 - (void)showInfoPanel { infoPanelView.hidden = NO; antibandPanelView.hidden = YES; }
 - (void)hideInfoPanel { infoPanelView.hidden = YES; }
@@ -339,6 +356,7 @@ static void setupMenu() {
         MenuViewController *vc = [[MenuViewController alloc] init];
         menuWindow.rootViewController = vc;
         menuWindow.hidden = NO;
+        
         UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
         threeFingerTap.numberOfTouchesRequired = 3; 
         threeFingerTap.numberOfTapsRequired = 2;    
