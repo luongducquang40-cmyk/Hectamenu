@@ -5,12 +5,11 @@ static BOOL isAimbotEnabled = NO;
 static BOOL isEspEnabled = NO;
 static float currentFOV = 90.0;
 static UIWindow *menuWindow = nil;
+static UIImageView *globalLogoBtn = nil;
+static UIView *globalPanelView = nil;
 
 // --- GIAO DIỆN MENU ---
 @interface MenuViewController : UIViewController
-@property (nonatomic, strong) UIView *panelView;
-@property (nonatomic, strong) UIButton *aimbotBtn;
-@property (nonatomic, strong) UIButton *espBtn;
 @end
 
 @implementation MenuViewController
@@ -19,109 +18,111 @@ static UIWindow *menuWindow = nil;
     [super viewDidLoad];
     self.view.backgroundColor = [UIColor clearColor];
     
-    // 1. TẠO NÚT LOGO (Thay cho chữ M)
-    UIImageView *logoBtn = [[UIImageView alloc] initWithFrame:CGRectMake(20, 100, 70, 70)];
-    NSURL *url = [NSURL URLWithString:@"https://i.ibb.co/zTKMP8nv/image.png"]; // Link ảnh RROCK
+    // 1. TẠO NÚT LOGO
+    globalLogoBtn = [[UIImageView alloc] initWithFrame:CGRectMake(20, 100, 70, 70)];
+    NSURL *url = [NSURL URLWithString:@"https://i.ibb.co/zTKMP8nv/image.png"];
     NSData *data = [NSData dataWithContentsOfURL:url];
-    if (data) {
-        logoBtn.image = [UIImage imageWithData:data];
-    }
-    logoBtn.contentMode = UIViewContentModeScaleAspectFill;
-    logoBtn.layer.cornerRadius = 35; // Bo tròn 50%
-    logoBtn.clipsToBounds = YES;
-    logoBtn.layer.borderColor = [UIColor colorWithWhite:0.8 alpha:0.8].CGColor;
-    logoBtn.layer.borderWidth = 2.0;
-    logoBtn.userInteractionEnabled = YES; // Cho phép chạm vào ảnh
+    if (data) { globalLogoBtn.image = [UIImage imageWithData:data]; }
+    globalLogoBtn.contentMode = UIViewContentModeScaleAspectFill;
+    globalLogoBtn.layer.cornerRadius = 35;
+    globalLogoBtn.clipsToBounds = YES;
+    globalLogoBtn.layer.borderColor = [UIColor colorWithWhite:0.8 alpha:0.8].CGColor;
+    globalLogoBtn.layer.borderWidth = 2.0;
+    globalLogoBtn.userInteractionEnabled = YES;
     
-    // Thêm sự kiện chạm (Tap) để mở Menu
     UITapGestureRecognizer *tapGesture = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(togglePanel)];
-    [logoBtn addGestureRecognizer:tapGesture];
+    [globalLogoBtn addGestureRecognizer:tapGesture];
     
-    // Thêm sự kiện kéo thả (Pan) cho Logo
     UIPanGestureRecognizer *panGesture = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
-    [logoBtn addGestureRecognizer:panGesture];
+    [globalLogoBtn addGestureRecognizer:panGesture];
+    [self.view addSubview:globalLogoBtn];
     
-    [self.view addSubview:logoBtn];
+    // 2. TẠO BẢNG MENU
+    globalPanelView = [[UIView alloc] initWithFrame:CGRectMake(100, 100, 280, 450)];
     
-    // 2. Tạo bảng Menu (Hiệu ứng kính mờ Xám)
-    self.panelView = [[UIView alloc] initWithFrame:CGRectMake(100, 100, 280, 380)];
-    
-    // Nền mờ
     UIBlurEffect *blurEffect = [UIBlurEffect effectWithStyle:UIBlurEffectStyleDark];
     UIVisualEffectView *blurView = [[UIVisualEffectView alloc] initWithEffect:blurEffect];
-    blurView.frame = self.panelView.bounds;
+    blurView.frame = globalPanelView.bounds;
     blurView.layer.cornerRadius = 15;
     blurView.clipsToBounds = YES;
-    [self.panelView addSubview:blurView];
+    [globalPanelView addSubview:blurView];
     
-    self.panelView.layer.cornerRadius = 15;
-    self.panelView.layer.borderWidth = 1.5;
-    self.panelView.layer.borderColor = [UIColor colorWithWhite:0.5 alpha:0.5].CGColor;
-    self.panelView.layer.shadowColor = [UIColor blackColor].CGColor;
-    self.panelView.layer.shadowOpacity = 0.8;
-    self.panelView.layer.shadowRadius = 10;
-    self.panelView.hidden = YES;
-    [self.view addSubview:self.panelView];
+    globalPanelView.layer.cornerRadius = 15;
+    globalPanelView.layer.borderWidth = 1.5;
+    globalPanelView.layer.borderColor = [UIColor colorWithWhite:0.5 alpha:0.5].CGColor;
+    globalPanelView.hidden = YES;
+    globalPanelView.userInteractionEnabled = YES;
     
-    // 3. Logo bên trong bảng Menu
-    UIImageView *innerLogo = [[UIImageView alloc] initWithFrame:CGRectMake(65, 15, 150, 150)];
-    if (data) {
-        innerLogo.image = [UIImage imageWithData:data];
-    }
+    UIPanGestureRecognizer *panelPan = [[UIPanGestureRecognizer alloc] initWithTarget:self action:@selector(handlePan:)];
+    [globalPanelView addGestureRecognizer:panelPan];
+    [self.view addSubview:globalPanelView];
+    
+    // Logo trong menu
+    UIImageView *innerLogo = [[UIImageView alloc] initWithFrame:CGRectMake(65, 20, 150, 150)];
+    if (data) { innerLogo.image = [UIImage imageWithData:data]; }
     innerLogo.contentMode = UIViewContentModeScaleAspectFit;
     innerLogo.layer.cornerRadius = 75;
     innerLogo.clipsToBounds = YES;
-    [self.panelView addSubview:innerLogo];
+    [globalPanelView addSubview:innerLogo];
     
-    // 4. Tiêu đề
-    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 175, 280, 30)];
+    // Nút X
+    UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    closeBtn.frame = CGRectMake(240, 10, 30, 30);
+    [closeBtn setTitle:@"X" forState:UIControlStateNormal];
+    [closeBtn setTitleColor:[UIColor redColor] forState:UIControlStateNormal];
+    closeBtn.titleLabel.font = [UIFont boldSystemFontOfSize:20];
+    [closeBtn addTarget:self action:@selector(togglePanel) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:closeBtn];
+    
+    // Tiêu đề
+    UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 180, 280, 30)];
     title.text = @"GROCK PANEL";
     title.textColor = [UIColor colorWithWhite:0.9 alpha:1.0];
     title.font = [UIFont boldSystemFontOfSize:22];
     title.textAlignment = NSTextAlignmentCenter;
-    [self.panelView addSubview:title];
+    [globalPanelView addSubview:title];
     
-    // 5. Nút Aimbot (Màu xám)
-    self.aimbotBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.aimbotBtn.frame = CGRectMake(20, 220, 240, 40);
-    [self.aimbotBtn setTitle:@"Aimbot: OFF" forState:UIControlStateNormal];
-    self.aimbotBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [self.aimbotBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    self.aimbotBtn.layer.cornerRadius = 8;
-    self.aimbotBtn.tag = 1;
-    [self.aimbotBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [self.panelView addSubview:self.aimbotBtn];
+    // Nút Aimbot
+    UIButton *aimbotBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    aimbotBtn.frame = CGRectMake(20, 230, 240, 45);
+    [aimbotBtn setTitle:@"Aimbot: OFF" forState:UIControlStateNormal];
+    aimbotBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
+    [aimbotBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
+    aimbotBtn.layer.cornerRadius = 8;
+    aimbotBtn.tag = 1;
+    [aimbotBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:aimbotBtn];
     
-    // 6. Nút ESP
-    self.espBtn = [UIButton buttonWithType:UIButtonTypeSystem];
-    self.espBtn.frame = CGRectMake(20, 270, 240, 40);
-    [self.espBtn setTitle:@"ESP: OFF" forState:UIControlStateNormal];
-    self.espBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
-    [self.espBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
-    self.espBtn.layer.cornerRadius = 8;
-    self.espBtn.tag = 2;
-    [self.espBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
-    [self.panelView addSubview:self.espBtn];
+    // Nút ESP
+    UIButton *espBtn = [UIButton buttonWithType:UIButtonTypeSystem];
+    espBtn.frame = CGRectMake(20, 290, 240, 45);
+    [espBtn setTitle:@"ESP: OFF" forState:UIControlStateNormal];
+    espBtn.backgroundColor = [UIColor colorWithWhite:0.2 alpha:0.8];
+    [espBtn setTitleColor:[UIColor colorWithWhite:0.8 alpha:1.0] forState:UIControlStateNormal];
+    espBtn.layer.cornerRadius = 8;
+    espBtn.tag = 2;
+    [espBtn addTarget:self action:@selector(toggleBtnState:) forControlEvents:UIControlEventTouchUpInside];
+    [globalPanelView addSubview:espBtn];
     
-    // 7. Thanh trượt FOV
-    UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 320, 240, 20)];
+    // FOV
+    UILabel *fovLabel = [[UILabel alloc] initWithFrame:CGRectMake(20, 350, 240, 20)];
     fovLabel.text = @"FOV: 90";
     fovLabel.textColor = [UIColor colorWithWhite:0.7 alpha:1.0];
-    fovLabel.font = [UIFont systemFontOfSize:14];
+    fovLabel.font = [UIFont systemFontOfSize:16];
     fovLabel.tag = 100;
-    [self.panelView addSubview:fovLabel];
+    [globalPanelView addSubview:fovLabel];
     
-    UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(20, 345, 240, 20)];
+    UISlider *fovSlider = [[UISlider alloc] initWithFrame:CGRectMake(20, 380, 240, 20)];
     fovSlider.minimumValue = 10;
     fovSlider.maximumValue = 180;
     fovSlider.value = 90;
     fovSlider.tintColor = [UIColor colorWithWhite:0.6 alpha:1.0];
     [fovSlider addTarget:self action:@selector(fovChanged:) forControlEvents:UIControlEventValueChanged];
-    [self.panelView addSubview:fovSlider];
+    [globalPanelView addSubview:fovSlider];
 }
 
 - (void)togglePanel {
-    self.panelView.hidden = !self.panelView.hidden;
+    globalPanelView.hidden = !globalPanelView.hidden;
 }
 
 - (void)handlePan:(UIPanGestureRecognizer *)sender {
@@ -146,19 +147,46 @@ static UIWindow *menuWindow = nil;
 
 - (void)fovChanged:(UISlider *)sender {
     currentFOV = sender.value;
-    UILabel *label = [self.panelView viewWithTag:100];
+    UILabel *label = [globalPanelView viewWithTag:100];
     label.text = [NSString stringWithFormat:@"FOV: %.0f", currentFOV];
 }
 @end
 
-// --- HÀM KHỞI TẠO ---
+// --- HÀM KHỞI TẠO VÀ CƠ CHẾ 3 NGÓN TAY ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         menuWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         menuWindow.windowLevel = UIWindowLevelAlert + 1;
         menuWindow.backgroundColor = [UIColor clearColor];
-        menuWindow.rootViewController = [[MenuViewController alloc] init];
+        
+        MenuViewController *vc = [[MenuViewController alloc] init];
+        menuWindow.rootViewController = vc;
         menuWindow.hidden = NO;
+        
+        // CƠ CHẾ 3 NGÓN TAY CHẠM 2 LẦN
+        UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
+        threeFingerTap.numberOfTouchesRequired = 3; // Yêu cầu 3 ngón tay
+        threeFingerTap.numberOfTapsRequired = 2;    // Chạm 2 lần
+        [menuWindow addGestureRecognizer:threeFingerTap];
     });
 }
+
+// Thêm hàm xử lý 3 ngón tay vào MenuViewController
+@interface MenuViewController (Gesture)
+- (void)handleThreeFingerTap;
+@end
+
+@implementation MenuViewController (Gesture)
+- (void)handleThreeFingerTap {
+    // Ẩn/hiện cả Logo và Bảng Menu
+    BOOL isHidden = globalLogoBtn.hidden;
+    globalLogoBtn.hidden = !isHidden;
+    globalPanelView.hidden = YES; // Khi ẩn Logo thì ẩn luôn bảng Menu
+    
+    // Nếu đang ẩn mà bật lên thì hiện Logo thôi
+    if (isHidden) {
+        globalLogoBtn.hidden = NO;
+    }
+}
+@end
