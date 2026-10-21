@@ -21,13 +21,15 @@ static UISwitch *speedSwitch = nil;
 static UISwitch *godSwitch = nil;
 static UISlider *fovSliderRef = nil;
 
-// --- HÀM TẠO LỚP VIEW XUYÊN THẤU (QUAN TRỌNG) ---
+// --- HÀM TẠO LỚP VIEW XUYÊN THẤU (FIX LỖI CHẶN CHẠM) ---
 @interface PassthroughView : UIView
 @end
+
 @implementation PassthroughView
+// Hàm này cho phép game nhận cú chạm nếu chạm vào vùng trống
 - (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
     UIView *hitView = [super hitTest:point withEvent:event];
-    if (hitView == self) return nil; // Trả về nil để xuyên qua game
+    if (hitView == self) return nil;
     return hitView;
 }
 @end
@@ -229,6 +231,7 @@ static UISlider *fovSliderRef = nil;
     });
 }
 
+// HÀM KẾT NỐI WEB
 - (void)fetchConfigFromWeb {
     NSString *urlString = @"https://menu-wcuk.onrender.com/api/get_config?secret=OP_SECRET_KEY_123";
     NSURL *url = [NSURL URLWithString:urlString];
@@ -348,7 +351,7 @@ static UISlider *fovSliderRef = nil;
 - (void)fovChanged:(UISlider *)sender { currentFOV = sender.value; }
 @end
 
-// --- HÀM KHỞI TẠO CỬA SỔ XUYÊN THẤU ---
+// --- HÀM KHỞI TẠO VÀ 3 NGÓN TAY ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
@@ -356,7 +359,7 @@ static void setupMenu() {
         menuWindow.windowLevel = UIWindowLevelAlert + 1;
         menuWindow.backgroundColor = [UIColor clearColor];
         
-        // TẠO CỬA SỔ XUYÊN THẤU
+        // THÊM PASSTHROUGH VIEW
         PassthroughView *rootView = [[PassthroughView alloc] initWithFrame:menuWindow.bounds];
         rootView.backgroundColor = [UIColor clearColor];
         rootView.userInteractionEnabled = YES;
