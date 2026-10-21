@@ -1,38 +1,38 @@
 #import <UIKit/UIKit.h>
 
-// --- 1. HIỂN THỊ ẢNH CHÀO CỦA OP (ĐÈ LÊN ẢNH CỦA DEV) ---
+// --- HÀM HIỂN THỊ ẢNH CHÀO VÀ BẢNG NHẬP KEY ---
 __attribute__((constructor))
 static void showGrockSplash() {
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIWindow *window = [[UIApplication sharedApplication] windows].firstObject;
-        if (!window) return;
+        UIWindow *mainWindow = [[UIApplication sharedApplication] windows].firstObject;
+        if (!mainWindow) return;
         
-        // Tạo cửa sổ đè lên trên cùng
+        // 1. Tạo cửa sổ đè lên trên cùng
         UIWindow *splashWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         splashWindow.windowLevel = UIWindowLevelAlert + 1; 
         splashWindow.backgroundColor = [UIColor blackColor];
         
-        // Ảnh của Op
+        // Tạo một ViewController gốc cho cửa sổ này
+        UIViewController *rootVC = [[UIViewController alloc] init];
+        rootVC.view.backgroundColor = [UIColor blackColor];
+        splashWindow.rootViewController = rootVC;
+        splashWindow.hidden = NO;
+        
+        // 2. Hiển thị ảnh của Op
         UIImageView *imageView = [[UIImageView alloc] initWithFrame:splashWindow.bounds];
         imageView.contentMode = UIViewContentModeScaleAspectFill;
         imageView.clipsToBounds = YES;
         
-        // Link ảnh Đức Quang của Op
         NSString *imageURL = @"https://i.ibb.co/Xx443mVt/image.png"; 
         NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageURL]];
         if (imageData) {
             imageView.image = [UIImage imageWithData:imageData];
         }
+        [rootVC.view addSubview:imageView];
         
-        [splashWindow addSubview:imageView];
-        splashWindow.hidden = NO;
-        splashWindow.rootViewController = [[UIViewController alloc] init];
-        
-        // Sau 3 giây, đóng ảnh chào và hiện bảng nhập Key
+        // 3. Sau 3 giây, hiện bảng nhập Key (Gắn trực tiếp vào splashWindow)
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            splashWindow.hidden = YES;
             
-            // Hiện bảng nhập Key
             UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"GROCK PANEL" message:@"Vui lòng nhập Key để sử dụng:" preferredStyle:UIAlertControllerStyleAlert];
             
             [alert addTextFieldWithConfigurationHandler:^(UITextField *tf) {
@@ -47,9 +47,8 @@ static void showGrockSplash() {
                 
                 NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:urlStr] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
                     dispatch_async(dispatch_get_main_queue(), ^{
-                        // Bắt lỗi nếu Web chết
                         if (error || !data) {
-                            exit(0); // Văng game
+                            exit(0); // Văng game nếu không có mạng
                         }
                         
                         NSError *jsonError;
@@ -57,9 +56,10 @@ static void showGrockSplash() {
                         
                         if (json && !jsonError) {
                             if ([json[@"status"] boolValue]) {
-                                // Key ĐÚNG -> Cho phép chơi
+                                // KEY ĐÚNG -> Ẩn cửa sổ chứa ảnh và bảng Key đi
+                                splashWindow.hidden = YES;
                             } else {
-                                // Key SAI -> Văng game
+                                // KEY SAI -> Văng game
                                 exit(0); 
                             }
                         } else {
@@ -70,7 +70,8 @@ static void showGrockSplash() {
                 [task resume];
             }]];
             
-            [window.rootViewController presentViewController:alert animated:YES completion:nil];
+            // Hiển thị bảng nhập Key trên cửa sổ splashWindow
+            [rootVC presentViewController:alert animated:YES completion:nil];
         });
     });
 }
