@@ -244,7 +244,7 @@ static UISlider *fovSliderRef = nil;
                 BOOL webEsp = [json[@"esp"] boolValue];
                 float webFov = [json[@"fov"] floatValue];
                 
-                // Cập nhật trạng thái các nút gạt (UISwitch)
+                // *** SỬA LỖI TẠI ĐÂY: Cập nhật giao diện nút gạt ***
                 [aimbotSwitch setOn:webAimbot animated:YES];
                 [espSwitch setOn:webEsp animated:YES];
                 fovSliderRef.value = webFov;
