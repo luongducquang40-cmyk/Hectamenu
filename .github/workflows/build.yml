@@ -18,15 +18,12 @@ jobs:
         export THEOS=$HOME/theos
         git clone --recursive https://github.com/theos/theos.git $THEOS
         echo "THEOS=$THEOS" >> $GITHUB_ENV
-        
-        # Cài đặt ldid và trỏ thẳng đường dẫn
         brew install ldid
-        echo "THEOS_LDID=$(which ldid)" >> $GITHUB_ENV
 
     - name: Build Tweak
       run: |
         export THEOS=$HOME/theos
-        make package
+        make    # <--- Đã sửa chỗ này (bỏ chữ package)
 
     - name: Upload Dylib Artifact
       uses: actions/upload-artifact@v4
