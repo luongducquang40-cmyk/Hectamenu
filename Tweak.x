@@ -1,4 +1,5 @@
 #import <UIKit/UIKit.h>
+#pragma clang diagnostic ignored "-Wunused-variable"
 
 static BOOL isAimbotEnabled = NO;
 static BOOL isEspEnabled = NO;
