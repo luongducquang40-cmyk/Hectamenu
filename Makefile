@@ -5,7 +5,7 @@ INSTALL_TARGET_PROCESSES = SpringBoard FreeFire
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = MyMenu
-MyMenu_FILES = Tweak.x
+MyMenu_FILES = Tweak.x MyMenu.plist
 MyMenu_CFLAGS = -fobjc-arc
 
 include $(THEOS_MAKE_PATH)/tweak.mk
