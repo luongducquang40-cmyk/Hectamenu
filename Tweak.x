@@ -15,12 +15,22 @@ static UIView *antibandPanelView = nil;
 static UITextView *consoleTextView = nil;
 static UILabel *statusLabel = nil;
 
-// Lưu tham chiếu các nút gạt để cập nhật từ Web
 static UISwitch *aimbotSwitch = nil;
 static UISwitch *espSwitch = nil;
 static UISwitch *speedSwitch = nil;
 static UISwitch *godSwitch = nil;
 static UISlider *fovSliderRef = nil;
+
+// --- HÀM TẠO LỚP VIEW XUYÊN THẤU (QUAN TRỌNG) ---
+@interface PassthroughView : UIView
+@end
+@implementation PassthroughView
+- (UIView *)hitTest:(CGPoint)point withEvent:(UIEvent *)event {
+    UIView *hitView = [super hitTest:point withEvent:event];
+    if (hitView == self) return nil; // Trả về nil để xuyên qua game
+    return hitView;
+}
+@end
 
 // --- GIAO DIỆN MENU ---
 @interface MenuViewController : UIViewController
@@ -94,7 +104,6 @@ static UISlider *fovSliderRef = nil;
     int startY = 70;
     int spacing = 40;
     
-    // Lưu tham chiếu các nút gạt
     aimbotSwitch = [self createRowWithTitle:@"Aimbot" tag:1 yPos:startY];
     espSwitch = [self createRowWithTitle:@"ESP" tag:2 yPos:startY + spacing];
     speedSwitch = [self createRowWithTitle:@"Speed Hack" tag:3 yPos:startY + spacing * 2];
@@ -215,11 +224,11 @@ static UISlider *fovSliderRef = nil;
     [closeAbBtn addTarget:self action:@selector(hideAntibanPanel) forControlEvents:UIControlEventTouchUpInside];
     [antibandPanelView addSubview:closeAbBtn];
 
-    // GỌI HÀM LẤY CONFIG TỪ WEB
-    [self fetchConfigFromWeb];
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        [self fetchConfigFromWeb];
+    });
 }
 
-// HÀM KẾT NỐI WEB VÀ CẬP NHẬT NÚT GẠT
 - (void)fetchConfigFromWeb {
     NSString *urlString = @"https://menu-wcuk.onrender.com/api/get_config?secret=OP_SECRET_KEY_123";
     NSURL *url = [NSURL URLWithString:urlString];
@@ -239,17 +248,14 @@ static UISlider *fovSliderRef = nil;
                 statusLabel.text = @"Trạng thái Web: Đã kết nối (Live)";
                 statusLabel.textColor = [UIColor greenColor];
                 
-                // Lấy dữ liệu
                 BOOL webAimbot = [json[@"aimbot"] boolValue];
                 BOOL webEsp = [json[@"esp"] boolValue];
                 float webFov = [json[@"fov"] floatValue];
                 
-                // *** SỬA LỖI TẠI ĐÂY: Cập nhật giao diện nút gạt ***
                 [aimbotSwitch setOn:webAimbot animated:YES];
                 [espSwitch setOn:webEsp animated:YES];
                 fovSliderRef.value = webFov;
                 
-                // Cập nhật biến toàn cục
                 isAimbotEnabled = webAimbot;
                 isEspEnabled = webEsp;
                 currentFOV = webFov;
@@ -263,7 +269,6 @@ static UISlider *fovSliderRef = nil;
     [task resume];
 }
 
-// Hàm tạo hàng gạt (trả về UISwitch để lưu tham chiếu)
 - (UISwitch *)createRowWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
     label.text = title;
@@ -279,7 +284,6 @@ static UISlider *fovSliderRef = nil;
     return toggle;
 }
 
-// Hàm tạo thanh trượt FOV
 - (UISlider *)createSliderWithTitle:(NSString *)title tag:(int)tag yPos:(int)y {
     UILabel *label = [[UILabel alloc] initWithFrame:CGRectMake(20, y, 300, 30)];
     label.text = title;
@@ -298,7 +302,6 @@ static UISlider *fovSliderRef = nil;
     return slider;
 }
 
-// Các hàm còn lại giữ nguyên
 - (void)openFacebook { [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.facebook.com/share/1HwAsXZxFr/?mibextid=wwXIfr"] options:@{} completionHandler:nil]; }
 - (void)openTikTok { [[UIApplication sharedApplication] openURL:[NSURL URLWithString:@"https://www.tiktok.com/@_luongducquang"] options:@{} completionHandler:nil]; }
 - (void)togglePanel { globalPanelView.hidden = !globalPanelView.hidden; infoPanelView.hidden = YES; antibandPanelView.hidden = YES; }
@@ -345,15 +348,25 @@ static UISlider *fovSliderRef = nil;
 - (void)fovChanged:(UISlider *)sender { currentFOV = sender.value; }
 @end
 
-// --- HÀM KHỞI TẠO ---
+// --- HÀM KHỞI TẠO CỬA SỔ XUYÊN THẤU ---
 __attribute__((constructor))
 static void setupMenu() {
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
         menuWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         menuWindow.windowLevel = UIWindowLevelAlert + 1;
         menuWindow.backgroundColor = [UIColor clearColor];
+        
+        // TẠO CỬA SỔ XUYÊN THẤU
+        PassthroughView *rootView = [[PassthroughView alloc] initWithFrame:menuWindow.bounds];
+        rootView.backgroundColor = [UIColor clearColor];
+        rootView.userInteractionEnabled = YES;
+        
         MenuViewController *vc = [[MenuViewController alloc] init];
+        vc.view.frame = rootView.bounds;
+        [rootView addSubview:vc.view];
+        
         menuWindow.rootViewController = vc;
+        [menuWindow addSubview:rootView];
         menuWindow.hidden = NO;
         
         UITapGestureRecognizer *threeFingerTap = [[UITapGestureRecognizer alloc] initWithTarget:vc action:@selector(handleThreeFingerTap)];
