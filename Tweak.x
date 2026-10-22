@@ -8,18 +8,14 @@ NSString* formatExpiryDate(NSString *expiryStr) {
     
     NSDate *expiryDate = nil;
     
-    // Nếu KeyAuth trả về timestamp (số)
     if ([expiryStr doubleValue] > 0) {
         NSTimeInterval timestamp = [expiryStr doubleValue];
         expiryDate = [NSDate dateWithTimeIntervalSince1970:timestamp];
-    } 
-    // Nếu KeyAuth trả về chuỗi ISO (2026-11-22T...)
-    else {
+    } else {
         NSISO8601DateFormatter *isoFormatter = [[NSISO8601DateFormatter alloc] init];
         expiryDate = [isoFormatter dateFromString:expiryStr];
     }
     
-    // Tính số ngày còn lại
     if (expiryDate) {
         NSTimeInterval timeInterval = [expiryDate timeIntervalSinceNow];
         int daysLeft = (int)(timeInterval / (60 * 60 * 24));
@@ -141,7 +137,6 @@ NSString* formatExpiryDate(NSString *expiryStr) {
                     [[NSUserDefaults standardUserDefaults] setObject:key forKey:@"GrockSavedKey"];
                     [[NSUserDefaults standardUserDefaults] synchronize];
                     
-                    // Lấy ngày hết hạn
                     NSString *expiryRaw = @"Vĩnh viễn";
                     NSArray *subs = json[@"info"][@"subscriptions"];
                     if (subs && subs.count > 0) {
@@ -150,9 +145,7 @@ NSString* formatExpiryDate(NSString *expiryStr) {
                         expiryRaw = json[@"info"][@"expires"];
                     }
                     
-                    // Format lại thành số ngày
                     NSString *formattedExpiry = formatExpiryDate(expiryRaw);
-                    
                     [self showSuccessViewWithExpiry:formattedExpiry];
                     
                 } else {
@@ -207,11 +200,12 @@ NSString* formatExpiryDate(NSString *expiryStr) {
 }
 @end
 
-// --- HÀM KIỂM TRA KEY TỰ ĐỘNG ---
+// --- HÀM KIỂM TRA KEY TỰ ĐỘNG (ĐÃ SỬA LỖI BYPASS) ---
 static void autoCheckSavedKey(UIViewController *rootVC) {
     NSString *savedKey = [[NSUserDefaults standardUserDefaults] objectForKey:@"GrockSavedKey"];
+    
     if (!savedKey || savedKey.length == 0) {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 1.0 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
             LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectZero];
             loginView.translatesAutoresizingMaskIntoConstraints = NO;
             [rootVC.view addSubview:loginView];
@@ -230,12 +224,22 @@ static void autoCheckSavedKey(UIViewController *rootVC) {
     NSString *appName = @"Grocklq";
     NSString *appVersion = @"1.0";
     NSString *hwid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    
     NSString *initUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=init&name=%@&ownerid=%@&ver=%@", appName, ownerId, appVersion];
     
     NSURLSessionDataTask *initTask = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:initUrl] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-        if (error || !data) return;
+        if (error || !data) {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"GrockSavedKey"];
+            dispatch_async(dispatch_get_main_queue(), ^{ autoCheckSavedKey(rootVC); });
+            return;
+        }
+        
         NSDictionary *initJson = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
-        if (!initJson || ![initJson[@"success"] boolValue]) return;
+        if (!initJson || ![initJson[@"success"] boolValue]) {
+            [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"GrockSavedKey"];
+            dispatch_async(dispatch_get_main_queue(), ^{ autoCheckSavedKey(rootVC); });
+            return;
+        }
         
         NSString *sessionId = initJson[@"sessionid"];
         NSString *checkUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=license&key=%@&hwid=%@&sessionid=%@&name=%@&ownerid=%@&ver=%@", savedKey, hwid, sessionId, appName, ownerId, appVersion];
@@ -245,21 +249,18 @@ static void autoCheckSavedKey(UIViewController *rootVC) {
                 if (!error && data) {
                     NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
                     if (json && [json[@"success"] boolValue]) {
+                        // Key cũ vẫn còn hạn -> Vào thẳng game
                         splashWindow.hidden = YES;
                         splashWindow = nil;
                         return;
                     }
                 }
-                LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectZero];
-                loginView.translatesAutoresizingMaskIntoConstraints = NO;
-                [rootVC.view addSubview:loginView];
-                [NSLayoutConstraint activateConstraints:@[
-                    [loginView.centerXAnchor constraintEqualToAnchor:rootVC.view.centerXAnchor],
-                    [loginView.centerYAnchor constraintEqualToAnchor:rootVC.view.centerYAnchor],
-                    [loginView.widthAnchor constraintEqualToConstant:450],
-                    [loginView.heightAnchor constraintEqualToConstant:230]
-                ]];
-                [loginView.keyField becomeFirstResponder];
+                
+                // NẾU KEY BỊ BAN/XÓA: Xóa key cũ trong máy và bắt nhập lại
+                [[NSUserDefaults standardUserDefaults] removeObjectForKey:@"GrockSavedKey"];
+                [[NSUserDefaults standardUserDefaults] synchronize];
+                
+                autoCheckSavedKey(rootVC);
             });
         }];
         [checkTask resume];
