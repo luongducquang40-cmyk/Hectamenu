@@ -1,12 +1,117 @@
 #import <UIKit/UIKit.h>
 
-// Biến toàn cục để giữ cửa sổ không bị hủy
 static UIWindow *splashWindow = nil;
 
+// --- GIAO DIỆN NHẬP KEY (NẰM NGANG) ---
+@interface LoginView : UIView
+@property (nonatomic, strong) UITextField *keyField;
+@property (nonatomic, strong) UILabel *statusLabel;
+@end
+
+@implementation LoginView
+
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor colorWithRed:0.05 green:0.05 blue:0.05 alpha:0.9];
+        self.layer.cornerRadius = 15;
+        self.layer.borderWidth = 2;
+        self.layer.borderColor = [UIColor cyanColor].CGColor;
+        
+        // Tiêu đề
+        UILabel *title = [[UILabel alloc] initWithFrame:CGRectMake(0, 20, frame.size.width, 30)];
+        title.text = @"GROCK PANEL";
+        title.textColor = [UIColor cyanColor];
+        title.font = [UIFont boldSystemFontOfSize:24];
+        title.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:title];
+        
+        // Ô nhập Key
+        self.keyField = [[UITextField alloc] initWithFrame:CGRectMake(30, 70, frame.size.width - 60, 40)];
+        self.keyField.backgroundColor = [UIColor whiteColor];
+        self.keyField.layer.cornerRadius = 8;
+        self.keyField.placeholder = @"Nhập Key...";
+        self.keyField.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:self.keyField];
+        
+        // Nút Xác nhận
+        UIButton *btn = [UIButton buttonWithType:UIButtonTypeSystem];
+        btn.frame = CGRectMake(30, 130, frame.size.width - 60, 40);
+        [btn setTitle:@"XÁC NHẬN" forState:UIControlStateNormal];
+        btn.backgroundColor = [UIColor cyanColor];
+        [btn setTitleColor:[UIColor blackColor] forState:UIControlStateNormal];
+        btn.layer.cornerRadius = 8;
+        [btn addTarget:self action:@selector(checkKey) forControlEvents:UIControlEventTouchUpInside];
+        [self addSubview:btn];
+        
+        // Label trạng thái
+        self.statusLabel = [[UILabel alloc] initWithFrame:CGRectMake(0, 180, frame.size.width, 20)];
+        self.statusLabel.textColor = [UIColor yellowColor];
+        self.statusLabel.font = [UIFont systemFontOfSize:12];
+        self.statusLabel.textAlignment = NSTextAlignmentCenter;
+        [self addSubview:self.statusLabel];
+    }
+    return self;
+}
+
+- (void)checkKey {
+    NSString *key = self.keyField.text;
+    if (key.length == 0) return;
+    
+    self.statusLabel.text = @"Đang kiểm tra...";
+    
+    // Thông tin KeyAuth của Op
+    NSString *ownerId = @"RqTkTCmBWe";
+    NSString *appName = @"Grocklq";
+    NSString *appVersion = @"1.0";
+    NSString *hwid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    
+    // 1. Khởi tạo Session
+    NSString *initUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=init&name=%@&ownerid=%@&ver=%@", appName, ownerId, appVersion];
+    
+    NSURLSessionDataTask *initTask = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:initUrl] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error || !data) {
+            dispatch_async(dispatch_get_main_queue(), ^{ self.statusLabel.text = @"Lỗi kết nối!"; });
+            return;
+        }
+        
+        NSDictionary *initJson = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        if (!initJson || ![initJson[@"success"] boolValue]) {
+            dispatch_async(dispatch_get_main_queue(), ^{ self.statusLabel.text = @"Lỗi khởi tạo session!"; });
+            return;
+        }
+        
+        NSString *sessionId = initJson[@"sessionid"];
+        
+        // 2. Check Key với Session ID
+        NSString *checkUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=license&key=%@&hwid=%@&sessionid=%@&name=%@&ownerid=%@&ver=%@", key, hwid, sessionId, appName, ownerId, appVersion];
+        
+        NSURLSessionDataTask *checkTask = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:checkUrl] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (error || !data) {
+                    self.statusLabel.text = @"Lỗi kết nối!";
+                    return;
+                }
+                
+                NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                if (json && [json[@"success"] boolValue]) {
+                    splashWindow.hidden = YES;
+                    splashWindow = nil;
+                } else {
+                    self.statusLabel.text = @"Key không hợp lệ!";
+                }
+            });
+        }];
+        [checkTask resume];
+    }];
+    [initTask resume];
+}
+@end
+
+// --- HÀM KHỞI TẠO ---
 __attribute__((constructor))
 static void showGrockSplash() {
     dispatch_async(dispatch_get_main_queue(), ^{
-        // 1. Tạo cửa sổ đè lên trên cùng
         splashWindow = [[UIWindow alloc] initWithFrame:[UIScreen mainScreen].bounds];
         splashWindow.windowLevel = UIWindowLevelAlert + 1; 
         splashWindow.backgroundColor = [UIColor blackColor];
@@ -16,61 +121,24 @@ static void showGrockSplash() {
         splashWindow.rootViewController = rootVC;
         splashWindow.hidden = NO;
         
-        // 2. Hiển thị ảnh của Op
+        // Ép xoay ngang
+        [[UIDevice currentDevice] setValue:@(UIInterfaceOrientationLandscapeRight) forKey:@"orientation"];
+        
+        // Ảnh của Op
         UIImageView *imageView = [[UIImageView alloc] initWithFrame:splashWindow.bounds];
         imageView.contentMode = UIViewContentModeScaleAspectFill;
         imageView.clipsToBounds = YES;
-        
         NSString *imageURL = @"https://i.ibb.co/Xx443mVt/image.png"; 
         NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageURL]];
-        if (imageData) {
-            imageView.image = [UIImage imageWithData:imageData];
-        }
+        if (imageData) { imageView.image = [UIImage imageWithData:imageData]; }
         [rootVC.view addSubview:imageView];
         
-        // 3. Sau 3 giây, TỰ ĐỘNG hiện bảng nhập Key
+        // Sau 3 giây, hiện bảng nhập Key
         dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            
-            UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"GROCK PANEL" message:@"Vui lòng nhập Key để sử dụng:" preferredStyle:UIAlertControllerStyleAlert];
-            
-            [alert addTextFieldWithConfigurationHandler:^(UITextField *tf) {
-                tf.placeholder = @"Nhập Key...";
-            }];
-            
-            [alert addAction:[UIAlertAction actionWithTitle:@"Xác nhận" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
-                NSString *key = alert.textFields.firstObject.text;
-                
-                // GỬI KEY LÊN WEB CỦA OP ĐỂ CHECK
-                NSString *urlStr = [NSString stringWithFormat:@"https://menu-wcuk.onrender.com/api/check_key?key=%@", key];
-                
-                NSURLSessionDataTask *task = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:urlStr] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
-                    dispatch_async(dispatch_get_main_queue(), ^{
-                        if (error || !data) {
-                            exit(0); // Văng game nếu không có mạng
-                        }
-                        
-                        NSError *jsonError;
-                        NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
-                        
-                        if (json && !jsonError) {
-                            if ([json[@"status"] boolValue]) {
-                                // Key ĐÚNG -> Ẩn cửa sổ ảnh chào, cho phép vào game
-                                splashWindow.hidden = YES;
-                                splashWindow = nil; // Giải phóng bộ nhớ
-                            } else {
-                                // Key SAI -> Văng game
-                                exit(0); 
-                            }
-                        } else {
-                            exit(0);
-                        }
-                    });
-                }];
-                [task resume];
-            }]];
-            
-            // Hiển thị bảng nhập Key trên chính cửa sổ (rootVC) của chúng ta
-            [rootVC presentViewController:alert animated:YES completion:nil];
+            // Kích thước bảng nhập key (Ngang)
+            LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectMake(0, 0, 500, 220)];
+            loginView.center = rootVC.view.center;
+            [rootVC.view addSubview:loginView];
         });
     });
 }
