@@ -110,8 +110,22 @@ static UIWindow *splashWindow = nil;
                 
                 NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
                 if (json && [json[@"success"] boolValue]) {
-                    splashWindow.hidden = YES;
-                    splashWindow = nil;
+                    
+                    // Lưu Key vào bộ nhớ máy để lần sau không phải nhập
+                    [[NSUserDefaults standardUserDefaults] setObject:key forKey:@"GrockSavedKey"];
+                    [[NSUserDefaults standardUserDefaults] synchronize];
+                    
+                    // Lấy thông tin hết hạn (nếu KeyAuth trả về)
+                    NSString *expiry = json[@"info"][@"expires"] ? json[@"info"][@"expires"] : @"Vĩnh viễn";
+                    
+                    // Hiện thông báo thành công
+                    UIAlertController *alert = [UIAlertController alertControllerWithTitle:@"THÀNH CÔNG" message:[NSString stringWithFormat:@"Key hợp lệ!\nHạn sử dụng: %@", expiry] preferredStyle:UIAlertControllerStyleAlert];
+                    [alert addAction:[UIAlertAction actionWithTitle:@"Vào Game" style:UIAlertActionStyleDefault handler:^(UIAlertAction *action) {
+                        splashWindow.hidden = YES;
+                        splashWindow = nil;
+                    }]];
+                    [self.window.rootViewController presentViewController:alert animated:YES completion:nil];
+                    
                 } else {
                     self.statusLabel.text = @"Key không hợp lệ!";
                 }
@@ -123,6 +137,72 @@ static UIWindow *splashWindow = nil;
 }
 @end
 
+// --- HÀM KIỂM TRA KEY TỰ ĐỘNG KHI KHỞI ĐỘNG ---
+static void autoCheckSavedKey(UIViewController *rootVC) {
+    NSString *savedKey = [[NSUserDefaults standardUserDefaults] objectForKey:@"GrockSavedKey"];
+    
+    // Nếu chưa từng lưu key, hiện bảng nhập
+    if (!savedKey || savedKey.length == 0) {
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectZero];
+            loginView.translatesAutoresizingMaskIntoConstraints = NO;
+            [rootVC.view addSubview:loginView];
+            [NSLayoutConstraint activateConstraints:@[
+                [loginView.centerXAnchor constraintEqualToAnchor:rootVC.view.centerXAnchor],
+                [loginView.centerYAnchor constraintEqualToAnchor:rootVC.view.centerYAnchor],
+                [loginView.widthAnchor constraintEqualToConstant:450],
+                [loginView.heightAnchor constraintEqualToConstant:230]
+            ]];
+            [loginView.keyField becomeFirstResponder];
+        });
+        return;
+    }
+    
+    // Nếu có Key đã lưu, kiểm tra ngầm
+    NSString *ownerId = @"RqTkTCmBWe";
+    NSString *appName = @"Grocklq";
+    NSString *appVersion = @"1.0";
+    NSString *hwid = [[[UIDevice currentDevice] identifierForVendor] UUIDString];
+    
+    NSString *initUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=init&name=%@&ownerid=%@&ver=%@", appName, ownerId, appVersion];
+    
+    NSURLSessionDataTask *initTask = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:initUrl] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+        if (error || !data) return;
+        NSDictionary *initJson = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+        if (!initJson || ![initJson[@"success"] boolValue]) return;
+        
+        NSString *sessionId = initJson[@"sessionid"];
+        NSString *checkUrl = [NSString stringWithFormat:@"https://keyauth.win/api/1.3/?type=license&key=%@&hwid=%@&sessionid=%@&name=%@&ownerid=%@&ver=%@", savedKey, hwid, sessionId, appName, ownerId, appVersion];
+        
+        NSURLSessionDataTask *checkTask = [[NSURLSession sharedSession] dataTaskWithURL:[NSURL URLWithString:checkUrl] completionHandler:^(NSData *data, NSURLResponse *response, NSError *error) {
+            dispatch_async(dispatch_get_main_queue(), ^{
+                if (!error && data) {
+                    NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
+                    if (json && [json[@"success"] boolValue]) {
+                        // Key cũ vẫn còn hạn -> Vào thẳng game
+                        splashWindow.hidden = YES;
+                        splashWindow = nil;
+                        return;
+                    }
+                }
+                // Key cũ hết hạn hoặc lỗi -> Hiện bảng nhập
+                LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectZero];
+                loginView.translatesAutoresizingMaskIntoConstraints = NO;
+                [rootVC.view addSubview:loginView];
+                [NSLayoutConstraint activateConstraints:@[
+                    [loginView.centerXAnchor constraintEqualToAnchor:rootVC.view.centerXAnchor],
+                    [loginView.centerYAnchor constraintEqualToAnchor:rootVC.view.centerYAnchor],
+                    [loginView.widthAnchor constraintEqualToConstant:450],
+                    [loginView.heightAnchor constraintEqualToConstant:230]
+                ]];
+                [loginView.keyField becomeFirstResponder];
+            });
+        }];
+        [checkTask resume];
+    }];
+    [initTask resume];
+}
+
 // --- HÀM KHỞI TẠO ---
 __attribute__((constructor))
 static void showGrockSplash() {
@@ -133,23 +213,19 @@ static void showGrockSplash() {
         
         UIViewController *rootVC = [[UIViewController alloc] init];
         rootVC.view.backgroundColor = [UIColor blackColor];
+        rootVC.view.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        
         splashWindow.rootViewController = rootVC;
         splashWindow.hidden = NO;
         
-        // Ép xoay ngang
         [[UIDevice currentDevice] setValue:@(UIInterfaceOrientationLandscapeRight) forKey:@"orientation"];
         
-        // 1. ẢNH NỀN (Ghim cố định, không bị đẩy lên khi bàn phím hiện)
         UIImageView *imageView = [[UIImageView alloc] init];
         imageView.contentMode = UIViewContentModeScaleAspectFill;
         imageView.clipsToBounds = YES;
         imageView.translatesAutoresizingMaskIntoConstraints = NO;
-        NSString *imageURL = @"https://i.ibb.co/Xx443mVt/image.png"; 
-        NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageURL]];
-        if (imageData) { imageView.image = [UIImage imageWithData:imageData]; }
         [rootVC.view addSubview:imageView];
         
-        // Ghim ảnh nền chết ở 4 góc màn hình
         [NSLayoutConstraint activateConstraints:@[
             [imageView.topAnchor constraintEqualToAnchor:rootVC.view.topAnchor],
             [imageView.bottomAnchor constraintEqualToAnchor:rootVC.view.bottomAnchor],
@@ -157,31 +233,26 @@ static void showGrockSplash() {
             [imageView.trailingAnchor constraintEqualToAnchor:rootVC.view.trailingAnchor]
         ]];
         
-        // Thêm sự kiện chạm vào nền để tắt bàn phím
+        dispatch_async(dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0), ^{
+            NSString *imageURL = @"https://i.ibb.co/Xx443mVt/image.png"; 
+            NSData *imageData = [NSData dataWithContentsOfURL:[NSURL URLWithString:imageURL]];
+            if (imageData) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    imageView.image = [UIImage imageWithData:imageData];
+                });
+            }
+        });
+        
         UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:rootVC action:@selector(dismissKeyboard)];
         [rootVC.view addGestureRecognizer:tap];
         
-        // 2. BẢNG NHẬP KEY
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 3 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
-            LoginView *loginView = [[LoginView alloc] initWithFrame:CGRectZero];
-            loginView.translatesAutoresizingMaskIntoConstraints = NO;
-            [rootVC.view addSubview:loginView];
-            
-            // Căn giữa bảng Key
-            [NSLayoutConstraint activateConstraints:@[
-                [loginView.centerXAnchor constraintEqualToAnchor:rootVC.view.centerXAnchor],
-                [loginView.centerYAnchor constraintEqualToAnchor:rootVC.view.centerYAnchor],
-                [loginView.widthAnchor constraintEqualToConstant:450],
-                [loginView.heightAnchor constraintEqualToConstant:230]
-            ]];
-            
-            // Bật bàn phím
-            [loginView.keyField becomeFirstResponder];
+        // Gọi hàm kiểm tra Key tự động sau 2.5 giây
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, 2.5 * NSEC_PER_SEC), dispatch_get_main_queue(), ^{
+            autoCheckSavedKey(rootVC);
         });
     });
 }
 
-// Hàm tắt bàn phím
 @interface UIViewController (Dismiss)
 - (void)dismissKeyboard;
 @end
